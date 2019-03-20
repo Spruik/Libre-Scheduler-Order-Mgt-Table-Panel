@@ -1,0 +1,89 @@
+<div class="modal-body">
+  <div class="modal-header">
+    <h2 class="modal-header-title">
+      <i class="fa fa-info-circle"></i>
+      <span class="p-l-1">Order Management</span>
+    </h2>
+
+    <a class="modal-header-close" ng-click="dismiss();">
+      <i class="fa fa-remove"></i>
+    </a>
+  </div>
+
+  <form class="form" id="order-mgt-scheduler-form">
+    <div class="modal-content" id="modal-modal-content">
+      <div class="text-left">
+          <div>
+            <div class="left-group" style="float:left">
+              <p style="margin: 20px 0px 0px 25px">Order NO:</p>
+              <div>
+                  <input style=" width:180px; margin: 0px 0px 0px 23px" id="order-id" class="ord-mgt-datalist-input" type="number" name="orderNumber" placeholder="Please enter Order NO.">
+              </div>
+            </div>
+  
+            <div class="right-group" style="float:right">
+              <p style="margin: 20px 65px 0px 5px">Order Quantity:</p>
+              <div>
+                  <input style=" width:180px; margin: 0px 23px 0px 0px" id="order-qty" class="ord-mgt-datalist-input" type="number" name="orderQty" placeholder="Please enter Order Qty.">
+              </div>
+            </div>
+          </div>
+          <div class="clearfix"></div>
+
+          <p style="margin: 20px 0px 0px 25px">Production Line:</p>
+          <div id="datalist-production-line" class="ord-mgt-datalist">
+              <input class="ord-mgt-datalist-input" id="datalist-input-production-line" type="text" name="productionLine" placeholder="&#61442; Search for production line">
+              <i id="datalist-icon" class="icon iconfont icon-arrow ord-mgt-dl-i"></i>
+              <ul id="datalist-ul-production-line" class="ord-mgt-datalist-ul"></ul>
+          </div>
+
+          <p style="margin: 20px 0px 0px 25px">Product:</p>
+          <div id="datalist-products" class="ord-mgt-datalist">
+              <input class="ord-mgt-datalist-input" id="datalist-input-products" type="text" name="products" placeholder="&#61442; Search for product">
+              <i id="datalist-icon" class="icon iconfont icon-arrow ord-mgt-dl-i"></i>
+              <ul id="datalist-ul-products" class="ord-mgt-datalist-ul"></ul>
+          </div>
+
+          <div>
+            <div class="left-group" style="float:left">
+              <p style="margin: 20px 0px 0px 25px">Scheduled Start Date:</p>
+              <div>
+                  <input style=" width:180px; margin: 0px 0px 0px 23px" class="ord-mgt-datalist-input form-control datepicker" name="scheduledDate" type="text" id="datepicker">
+              </div>
+            </div>
+
+            <div class="right-group" style="float:right">
+              <p style="margin: 20px 65px 0px 5px">Planned Rate per Hour:</p>
+              <div>
+                  <input style=" width:180px; margin: 0px 0px 0px 0px" id="planned-rate" class="ord-mgt-datalist-input" type="number" name="plannedRate" placeholder="Please enter planned rate/hr.">
+              </div>
+            </div>
+          </div>
+          <div class="clearfix"></div>
+      </div>
+
+      <div class="custom-separator" style="margin-top:30px"></div>
+
+      <div class="button-wrapper" style="text-align:center; margin-top:30px">
+        <button
+          id="order-mgt-scheduler-form-cancelBtn"
+          type="button"
+          class="btn btn-danger"
+          style="width:9rem"
+          ng-click="dismiss()"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="order-mgt-scheduler-form-submitBtn"
+          type="button"
+          class="btn btn-success"
+          style="width:9rem"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
