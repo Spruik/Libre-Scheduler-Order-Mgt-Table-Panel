@@ -1,12 +1,12 @@
-## Reason Codes Tree Panel 
-Custom Plugin that enables users to Create, Read, Update and Delete Reason Codes that are stored in PostgresDB.
+## Order Mgt Table Panel for scheduler
+Custom Plugin that enables the scheduler to create and realease order
 
 ------
 
-### PostgresDB Query example: 
-SELECT * FROM reason_codes
+### InfluxDB Query example: 
+SELECT "order_date", last("order_state"), "order_qty", "planned_rate" FROM "OrderPerformance" WHERE $timeFilter GROUP BY "product_desc", "production_line", "order_id", "product_id"
 
 -------
 
 ### Data format
-Data MUST be formatted as a TABLE !
+Data MUST be formatted as a TABLE!
