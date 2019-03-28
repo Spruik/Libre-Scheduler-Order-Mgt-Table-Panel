@@ -164,7 +164,7 @@ function getDurationText(momentDuration) {
   let days = momentDuration.get('d')
   let hrs = momentDuration.get('h')
   let mins = momentDuration.get('minute')
-  let text = ''
+  let text = 'under 1 minute'
 
   if (month > 0) {return 'Over a month!'}
 
@@ -175,7 +175,7 @@ function getDurationText(momentDuration) {
   }else if (hrs !== 0 && mins === 0){
     text = hrs + ' hour(s)'
   }else if (hrs === 0 && mins !== 0){
-    text = min + ' minute(s)'
+    text = mins + ' minute(s)'
   }
   
   return text

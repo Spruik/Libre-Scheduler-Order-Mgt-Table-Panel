@@ -155,7 +155,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     var days = momentDuration.get('d');
     var hrs = momentDuration.get('h');
     var mins = momentDuration.get('minute');
-    var text = '';
+    var text = 'under 1 minute';
 
     if (month > 0) {
       return 'Over a month!';
@@ -170,7 +170,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     } else if (hrs !== 0 && mins === 0) {
       text = hrs + ' hour(s)';
     } else if (hrs === 0 && mins !== 0) {
-      text = min + ' minute(s)';
+      text = mins + ' minute(s)';
     }
 
     return text;
