@@ -155,9 +155,8 @@ function updateOrder(action) {
 function writeInfluxLine(status){
   //For influxdb tag keys, must add a forward slash \ before each space 
   let product_desc = rowData.product_desc.split(' ').join('\\ ')
-  let production_line = rowData.production_line.split(' ').join('\\ ')
 
-  let line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ',production_line=' + production_line + ' '
+  let line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' '
 
   if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
     line += 'completion_qty=' + rowData.completion_qty + ','
@@ -174,6 +173,7 @@ function writeInfluxLine(status){
 
   line += 'order_state="' + status + '"' + ','
   line += 'order_date="' + rowData.order_date + '"' + ','
+  line += 'production_line="' + rowData.production_line + '"' + ','
   line += 'order_qty=' + rowData.order_qty + ','
   line += 'planned_rate=' + rowData.planned_rate
 

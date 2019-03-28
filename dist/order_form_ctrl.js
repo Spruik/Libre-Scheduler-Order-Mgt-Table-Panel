@@ -1,10 +1,9 @@
 'use strict';
 
-System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bootstrap-datepicker'], function (_export, _context) {
+System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', './libs/bootstrap-datepicker'], function (_export, _context) {
   "use strict";
 
-  var utils, appEvents, enableInstantSearch, bootstrap_datepicker, products, equipment, rowData, tryCatchCount;
-
+  var utils, moment, appEvents, enableInstantSearch, bootstrap_datepicker, products, equipment, rowData, tryCatchCount, _orderDurationHours;
 
   /**
    * This function is the entry point to show the order editing form
@@ -69,6 +68,7 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
       format: 'yyyy-mm-dd',
       autoclose: true
     });
+
     prefillData();
   }
 
@@ -109,6 +109,7 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
       $('input.ord-mgt-datalist-input#datalist-input-products').val(rowData.product_id + ' | ' + rowData.product_desc);
       $('input.ord-mgt-datalist-input#datepicker').val(rowData.order_date);
       $('input.ord-mgt-datalist-input#planned-rate').val(rowData.planned_rate);
+      updateDuration(rowData.order_qty, rowData.planned_rate);
     }
   }
 
@@ -120,6 +121,11 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
       var data = $('form#order-mgt-scheduler-form').serializeArray();
       submitOrder(data);
     });
+
+    $(document).on('input', 'input#planned-rate, input#order-qty', function (e) {
+      var data = $('form#order-mgt-scheduler-form').serializeArray();
+      updateDuration(data[1].value, data[5].value);
+    });
   }
 
   /**
@@ -127,6 +133,47 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
    */
   function removeListeners() {
     $(document).off('click', 'button#order-mgt-scheduler-form-submitBtn');
+    $(document).off('input', 'input#planned-rate, input#order-qty');
+  }
+
+  function updateDuration(qty, rate) {
+
+    if (qty !== "" && rate !== "") {
+      var durationHrs = parseInt(qty) / parseInt(rate);
+      var momentDuration = moment.duration(durationHrs, 'hours');
+
+      var durationText = getDurationText(momentDuration);
+
+      $('input.ord-mgt-datalist-input#duration').val(durationText);
+    } else {
+      $('input.ord-mgt-datalist-input#duration').val('');
+    }
+  }
+
+  function getDurationText(momentDuration) {
+    var month = momentDuration.get('month');
+    var days = momentDuration.get('d');
+    var hrs = momentDuration.get('h');
+    var mins = momentDuration.get('minute');
+    var text = '';
+
+    if (month > 0) {
+      return 'Over a month!';
+    }
+
+    if (days !== 0) {
+      hrs += days * 24;
+    }
+
+    if (hrs !== 0 && mins !== 0) {
+      text = hrs + ' hour(s) & ' + mins + ' minute(s)';
+    } else if (hrs !== 0 && mins === 0) {
+      text = hrs + ' hour(s)';
+    } else if (hrs === 0 && mins !== 0) {
+      text = min + ' minute(s)';
+    }
+
+    return text;
   }
 
   /**
@@ -143,7 +190,8 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
       productionLine: data[2].value,
       product: data[3].value,
       date: data[4].value,
-      plannedRate: data[5].value
+      plannedRate: data[5].value,
+      duration: data[6].value
     };
 
     if (isValueValid(inputValues)) {
@@ -211,12 +259,14 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
    * @param {*} inputs 
    */
   function hasTagsChanged(inputs) {
+
     if (!rowData) {
+      //if there is no rowData, meaning that the user is creating a new order, so return false
       return false;
     }
     var product_id = inputs.product.split(' | ')[0];
     var product_desc = inputs.product.split(' | ')[1];
-    return inputs.orderId !== rowData.order_id || inputs.productionLine !== rowData.production_line || product_id !== rowData.product_id || product_desc !== rowData.product_desc;
+    return inputs.orderId !== rowData.order_id || product_id !== rowData.product_id || product_desc !== rowData.product_desc;
   }
 
   /**
@@ -294,13 +344,14 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
 
     //For influxdb tag keys, must add a forward slash \ before each space 
     product_desc = product_desc.split(' ').join('\\ ');
-    data.productionLine = data.productionLine.split(' ').join('\\ ');
 
-    var line = 'OrderPerformance,order_id=' + data.orderId + ',product_id=' + product_id + ',product_desc=' + product_desc + ',production_line=' + data.productionLine + ' ';
+    var line = 'OrderPerformance,order_id=' + data.orderId + ',product_id=' + product_id + ',product_desc=' + product_desc + ' ';
+
+    //+ ',production_line=' + data.productionLine
 
     if (rowData) {
       if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-        line += 'completion_qty=' + rowData.completion_qty + ',';
+        line += 'compl_qty=' + rowData.completion_qty + ',';
       }
       if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
         line += 'machine_state="' + rowData.machine_state + '"' + ',';
@@ -312,6 +363,7 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
 
     line += 'order_state="' + 'Planned' + '"' + ',';
     line += 'order_date="' + data.date + '"' + ',';
+    line += 'production_line="' + data.productionLine + '"' + ',';
     line += 'order_qty=' + data.orderQty + ',';
     line += 'setpoint_rate=' + 0 + ',';
     line += 'planned_rate=' + data.plannedRate;
@@ -326,9 +378,8 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
   function writeOldInfluxLine() {
     //For influxdb tag keys, must add a forward slash \ before each space 
     var product_desc = rowData.product_desc.split(' ').join('\\ ');
-    var production_line = rowData.production_line.split(' ').join('\\ ');
 
-    var line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ',production_line=' + production_line + ' ';
+    var line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' ';
 
     if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
       line += 'completion_qty=' + rowData.completion_qty + ',';
@@ -345,6 +396,7 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
 
     line += 'order_state="' + 'Replaced' + '"' + ',';
     line += 'order_date="' + rowData.order_date + '"' + ',';
+    line += 'production_line="' + data.productionLine + '"' + ',';
     line += 'order_qty=' + rowData.order_qty + ',';
     line += 'planned_rate=' + rowData.planned_rate;
 
@@ -355,6 +407,8 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
   return {
     setters: [function (_utils) {
       utils = _utils;
+    }, function (_moment) {
+      moment = _moment.default;
     }, function (_appCoreCore) {
       appEvents = _appCoreCore.appEvents;
     }, function (_instant_search_ctrl) {
@@ -367,6 +421,7 @@ System.register(['./utils', 'app/core/core', './instant_search_ctrl', './libs/bo
       equipment = void 0;
       rowData = void 0;
       tryCatchCount = 1;
+      _orderDurationHours = void 0;
 
       _export('showOrderEditingForm', showOrderEditingForm);
     }

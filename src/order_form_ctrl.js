@@ -1,4 +1,5 @@
 import * as utils from './utils'
+import moment from 'moment'
 import { appEvents } from 'app/core/core'
 import { enableInstantSearch } from './instant_search_ctrl'
 import  * as bootstrap_datepicker  from './libs/bootstrap-datepicker'
@@ -7,6 +8,7 @@ let products
 let equipment
 let rowData
 let tryCatchCount = 1
+let _orderDurationHours
 
 /**
  * This function is the entry point to show the order editing form
@@ -71,6 +73,7 @@ function startCtrl(){
       format: 'yyyy-mm-dd',
       autoclose: true,
   })
+
   prefillData()
 }
 
@@ -115,6 +118,7 @@ function prefillData(){
     $('input.ord-mgt-datalist-input#datalist-input-products').val(rowData.product_id + ' | ' + rowData.product_desc)
     $('input.ord-mgt-datalist-input#datepicker').val(rowData.order_date)
     $('input.ord-mgt-datalist-input#planned-rate').val(rowData.planned_rate)
+    updateDuration(rowData.order_qty, rowData.planned_rate)
   }
 }
 
@@ -126,6 +130,11 @@ function addListeners(){
     let data = $('form#order-mgt-scheduler-form').serializeArray()
     submitOrder(data)
   })
+
+  $(document).on('input', 'input#planned-rate, input#order-qty', e => {
+    let data = $('form#order-mgt-scheduler-form').serializeArray()
+    updateDuration(data[1].value, data[5].value)
+  })
 }
 
 /**
@@ -133,6 +142,43 @@ function addListeners(){
  */
 function removeListeners(){
   $(document).off('click', 'button#order-mgt-scheduler-form-submitBtn')
+  $(document).off('input', 'input#planned-rate, input#order-qty')
+}
+
+function updateDuration(qty, rate){
+
+  if (qty !== "" && rate !== "") {
+    let durationHrs = parseInt(qty) / parseInt(rate)
+    let momentDuration = moment.duration(durationHrs, 'hours')
+
+    let durationText = getDurationText(momentDuration)
+    
+    $('input.ord-mgt-datalist-input#duration').val(durationText)
+  }else {
+    $('input.ord-mgt-datalist-input#duration').val('')
+  }
+}
+
+function getDurationText(momentDuration) {
+  let month = momentDuration.get('month')
+  let days = momentDuration.get('d')
+  let hrs = momentDuration.get('h')
+  let mins = momentDuration.get('minute')
+  let text = ''
+
+  if (month > 0) {return 'Over a month!'}
+
+  if (days !== 0) { hrs += days * 24 }
+
+  if (hrs !== 0 && mins !== 0) {
+    text = hrs + ' hour(s) & ' + mins + ' minute(s)'
+  }else if (hrs !== 0 && mins === 0){
+    text = hrs + ' hour(s)'
+  }else if (hrs === 0 && mins !== 0){
+    text = min + ' minute(s)'
+  }
+  
+  return text
 }
 
 /**
@@ -149,7 +195,8 @@ function submitOrder(data) {
     productionLine: data[2].value, 
     product: data[3].value, 
     date: data[4].value, 
-    plannedRate: data[5].value
+    plannedRate: data[5].value,
+    duration: data[6].value
   }
 
   if (isValueValid(inputValues)) {
@@ -220,14 +267,15 @@ function updateWithTagsUnchanged(url, input){
  * @param {*} inputs 
  */
 function hasTagsChanged(inputs) {
+  
   if (!rowData) {
+    //if there is no rowData, meaning that the user is creating a new order, so return false
     return false
   }
   const product_id = inputs.product.split(' | ')[0]
   const product_desc = inputs.product.split(' | ')[1]
   return (
     inputs.orderId !== rowData.order_id 
-    || inputs.productionLine !== rowData.production_line 
     || product_id !== rowData.product_id 
     || product_desc !== rowData.product_desc
   )
@@ -305,16 +353,17 @@ function isValueValid(data) {
 function writeInfluxLine (data) {
   const product_id = data.product.split(' | ')[0]
   let product_desc = data.product.split(' | ')[1]
-
+  
   //For influxdb tag keys, must add a forward slash \ before each space 
   product_desc = product_desc.split(' ').join('\\ ')
-  data.productionLine = data.productionLine.split(' ').join('\\ ')
 
-  let line = 'OrderPerformance,order_id=' + data.orderId + ',product_id=' + product_id + ',product_desc=' + product_desc + ',production_line=' + data.productionLine + ' '
+  let line = 'OrderPerformance,order_id=' + data.orderId + ',product_id=' + product_id + ',product_desc=' + product_desc + ' '
+
+  //+ ',production_line=' + data.productionLine
 
   if (rowData) {
     if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-      line += 'completion_qty=' + rowData.completion_qty + ','
+      line += 'compl_qty=' + rowData.completion_qty + ','
     }
     if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
       line += 'machine_state="' + rowData.machine_state + '"' + ','
@@ -326,6 +375,7 @@ function writeInfluxLine (data) {
 
   line += 'order_state="' + 'Planned' + '"' + ','
   line += 'order_date="' + data.date + '"' + ','
+  line += 'production_line="' + data.productionLine + '"' + ','
   line += 'order_qty=' + data.orderQty + ','
   line += 'setpoint_rate=' + 0 + ','
   line += 'planned_rate=' + data.plannedRate
@@ -340,9 +390,8 @@ function writeInfluxLine (data) {
 function writeOldInfluxLine(){
     //For influxdb tag keys, must add a forward slash \ before each space 
     let product_desc = rowData.product_desc.split(' ').join('\\ ')
-    let production_line = rowData.production_line.split(' ').join('\\ ')
   
-    let line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ',production_line=' + production_line + ' '
+    let line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' '
   
     if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
       line += 'completion_qty=' + rowData.completion_qty + ','
@@ -360,6 +409,7 @@ function writeOldInfluxLine(){
   
     line += 'order_state="' + 'Replaced' + '"' + ','
     line += 'order_date="' + rowData.order_date + '"' + ','
+    line += 'production_line="' + data.productionLine + '"' + ','
     line += 'order_qty=' + rowData.order_qty + ','
     line += 'planned_rate=' + rowData.planned_rate
   
