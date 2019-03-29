@@ -3,6 +3,7 @@ import moment from 'moment'
 import { appEvents } from 'app/core/core'
 import { enableInstantSearch } from './instant_search_ctrl'
 import  * as bootstrap_datepicker  from './libs/bootstrap-datepicker'
+import  * as bootstrap_timepicker  from './libs/bootstrap-timepicker'
 
 let products
 let equipment
@@ -74,6 +75,19 @@ function startCtrl(){
       autoclose: true,
   })
 
+  $('#changeover-minutes-picker').timepicker({
+    showMeridian: false,
+    showSeconds: true,
+    maxHours: 100,
+    minuteStep: 1,
+    secondStep: 1,
+    defaultTime: '00:00:00',
+    icons: {
+        up: 'fa fa-chevron-up',
+        down: 'fa fa-chevron-down'
+    }
+  })
+
   prefillData()
 }
 
@@ -118,6 +132,7 @@ function prefillData(){
     $('input.ord-mgt-datalist-input#datalist-input-products').val(rowData.product_id + ' | ' + rowData.product_desc)
     $('input.ord-mgt-datalist-input#datepicker').val(rowData.order_date)
     $('input.ord-mgt-datalist-input#planned-rate').val(rowData.planned_rate)
+    $('input.ord-mgt-datalist-input#changeover-minutes-picker').val(rowData.planned_changeover_time)
     updateDuration(rowData.order_qty, rowData.planned_rate)
   }
 }
@@ -196,7 +211,8 @@ function submitOrder(data) {
     product: data[3].value, 
     date: data[4].value, 
     plannedRate: data[5].value,
-    duration: data[6].value
+    duration: data[6].value,
+    changeover: data[7].value
   }
 
   if (isValueValid(inputValues)) {
@@ -376,6 +392,7 @@ function writeInfluxLine (data) {
   line += 'order_state="' + 'Planned' + '"' + ','
   line += 'order_date="' + data.date + '"' + ','
   line += 'production_line="' + data.productionLine + '"' + ','
+  line += 'planned_changeover_time="' + data.changeover + '"' + ','
   line += 'order_qty=' + data.orderQty + ','
   line += 'setpoint_rate=' + 0 + ','
   line += 'planned_rate=' + data.plannedRate
@@ -409,7 +426,8 @@ function writeOldInfluxLine(){
   
     line += 'order_state="' + 'Replaced' + '"' + ','
     line += 'order_date="' + rowData.order_date + '"' + ','
-    line += 'production_line="' + data.productionLine + '"' + ','
+    line += 'production_line="' + rowData.production_line + '"' + ','
+    line += 'planned_changeover_time="' + rowData.planned_changeover_time + '"' + ','
     line += 'order_qty=' + rowData.order_qty + ','
     line += 'planned_rate=' + rowData.planned_rate
   
