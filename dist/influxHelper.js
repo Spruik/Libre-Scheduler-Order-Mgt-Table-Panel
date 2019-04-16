@@ -30,15 +30,19 @@ System.register(['./utils', 'moment'], function (_export, _context) {
       line += 'setpoint_rate=' + data.setpoint_rate + ',';
     }
 
+    var startTime = data.scheduled_start_datetime ? data.scheduled_start_datetime : 0;
+    var endTime = data.scheduled_end_datetime ? data.scheduled_end_datetime : 0;
+
     line += 'order_state="' + status + '"' + ',';
     line += 'order_date="' + data.order_date + '"' + ',';
     line += 'planned_changeover_time="' + data.planned_changeover_time + '"' + ',';
-    line += 'scheduled_end_datetime=' + data.scheduled_end_datetime ? data.scheduled_end_datetime : 0 + ',';
-    line += 'scheduled_start_datetime=' + data.scheduled_start_datetime ? data.scheduled_start_datetime : 0 + ',';
+    line += 'scheduled_end_datetime=' + endTime + ',';
+    line += 'scheduled_start_datetime=' + startTime + ',';
     line += 'production_line="' + data.production_line + '"' + ',';
     line += 'order_qty=' + data.order_qty + ',';
     line += 'planned_rate=' + data.planned_rate;
 
+    //   console.log('writeLineForUpdate');
     //   console.log(line);
     return line;
   }
@@ -63,6 +67,8 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'setpoint_rate=' + 0 + ',';
     line += 'planned_rate=' + data.plannedRate;
 
+    //   console.log('writeLineForUpdateWithChangingTime');
+    //   console.log(line);
     return line;
   }
 
@@ -123,6 +129,7 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'scheduled_start_datetime=' + startTime + ',';
     line += 'planned_rate=' + data.planned_rate;
 
+    //   console.log('writeLineForTimeUpdate');
     //   console.log(line);
     return line;
   }
@@ -145,6 +152,8 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'setpoint_rate=' + 0 + ',';
     line += 'planned_rate=' + data.plannedRate;
 
+    //   console.log('writeLineForUpdateWithRemovingTime');
+    //   console.log(line);
     return line;
   }
 

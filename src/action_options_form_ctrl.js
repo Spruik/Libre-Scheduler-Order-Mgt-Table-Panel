@@ -178,6 +178,7 @@ function writeInfluxLine(status){
   line += 'order_qty=' + _rowData.order_qty + ','
   line += 'planned_rate=' + _rowData.planned_rate
 
+//   console.log('writeInfluxLine');
 //   console.log(line);
   return line
 }

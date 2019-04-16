@@ -74,12 +74,10 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
       } catch (e) {
         if (tryCatchCount < 15) {
           tryCatchCtrl();
-          console.log('Re-init: ' + tryCatchCount);
           tryCatchCount++;
         } else {
-          console.log(e);
           $('#order-mgt-scheduler-form-cancelBtn').trigger('click');
-          utils.alert('error', 'Error', 'Form initialisation failed, please try agian');
+          utils.alert('error', 'Error', 'Form initialisation failed, please try agian' + e);
         }
       }
     }, 200);
@@ -129,12 +127,10 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
         equipment = res;
         callback();
       }).catch(function (e) {
-        console.log(e);
-        utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql, please check the basebase connection');
+        utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection');
       });
     }).catch(function (e) {
-      console.log(e);
-      utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql, please check the basebase connection');
+      utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection');
     });
   }
 
@@ -143,7 +139,6 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    */
   function prefillData() {
     if (_rowData) {
-      // console.log('need to pre-fill')
       $('input.ord-mgt-datalist-input#order-id').val(_rowData.order_id);
       $('input.ord-mgt-datalist-input#order-qty').val(_rowData.order_qty);
       $('input.ord-mgt-datalist-input#datalist-input-production-line').val(_rowData.production_line);

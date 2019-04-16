@@ -20,9 +20,6 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
     _allData = tableCtrl.allData();
     _rowData = getRowData(_allData, tags);
 
-    console.log(_rowData);
-    console.log(_allData);
-
     if (_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready') {
       utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing');
       return;
@@ -98,9 +95,8 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
         closeForm();
         tableCtrl.refreshDashboard();
       }).catch(function (e) {
-        utils.alert('error', 'Database Error', 'An error occurred while writing data to the influxdb, please check the basebase connection');
+        utils.alert('error', 'Database Error', 'An error occurred while writing data to the influxdb : ' + e + 'please check the basebase connection');
         closeForm();
-        console.log(e);
       });
     }
   }
@@ -175,6 +171,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
     line += 'order_qty=' + _rowData.order_qty + ',';
     line += 'planned_rate=' + _rowData.planned_rate;
 
+    //   console.log('writeInfluxLine');
     //   console.log(line);
     return line;
   }
