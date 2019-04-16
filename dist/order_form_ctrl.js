@@ -431,14 +431,9 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     var ordersInOriginalLineAndDate = allData.filter(function (order) {
       return order.production_line === _rowData.production_line && order.order_date === _rowData.order_date;
     });
-    console.log(ordersInOriginalLineAndDate);
-
     return ordersInOriginalLineAndDate.filter(function (order) {
       var endTime = moment(inputValues.scheduled_end_datetime);
-      console.log('hh');
-      console.log(moment(order.scheduled_start_datetime).format('YYYY-MM-DD H:mm:ss'));
-      console.log(endTime.format('YYYY-MM-DD H:mm:ss'));
-      return order.scheduled_start_datetime >= endTime.valueOf();
+      return order.scheduled_start_datetime >= endTime.valueOf() && order.order_date === _rowData.order_date;
     });
   }
 

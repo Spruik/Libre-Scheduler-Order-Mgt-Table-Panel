@@ -59,12 +59,10 @@ function tryCatchCtrl(){
     } catch (e) {
       if (tryCatchCount < 15) {
         tryCatchCtrl()
-        console.log('Re-init: ' + tryCatchCount);
         tryCatchCount ++
       }else {
-        console.log(e)
         $('#order-mgt-scheduler-form-cancelBtn').trigger('click')
-        utils.alert('error', 'Error', 'Form initialisation failed, please try agian')
+        utils.alert('error', 'Error', 'Form initialisation failed, please try agian' + e)
       }
     }
   }, 200);
@@ -117,13 +115,11 @@ function getProductsAndEquipments (callback) {
           callback()
         })
         .catch(e => {
-          console.log(e)
-          utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql, please check the basebase connection')
+          utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection')
         })
     })
     .catch(e => {
-      console.log(e)
-      utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql, please check the basebase connection')
+      utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection')
     })
 }
 
@@ -132,7 +128,6 @@ function getProductsAndEquipments (callback) {
  */
 function prefillData(){
   if (_rowData) {
-    // console.log('need to pre-fill')
     $('input.ord-mgt-datalist-input#order-id').val(_rowData.order_id)
     $('input.ord-mgt-datalist-input#order-qty').val(_rowData.order_qty)
     $('input.ord-mgt-datalist-input#datalist-input-production-line').val(_rowData.production_line)
@@ -408,15 +403,11 @@ function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData){
  * @param {*} inputValues Inputs that the user entered in this order edition form
  */
 function getOrdersBeingAffect(allData, inputValues){
-  const ordersInOriginalLineAndDate = allData.filter(order => order.production_line === _rowData.production_line && order.order_date === _rowData.order_date)
-  console.log(ordersInOriginalLineAndDate);
-  
+  const ordersInOriginalLineAndDate = allData.filter(order => order.production_line === _rowData.production_line && order.order_date === _rowData.order_date)  
   return ordersInOriginalLineAndDate.filter(order => {
     let endTime = moment(inputValues.scheduled_end_datetime)
-    console.log('hh');
-    console.log(moment(order.scheduled_start_datetime).format('YYYY-MM-DD H:mm:ss'));
-    console.log(endTime.format('YYYY-MM-DD H:mm:ss'));
     return order.scheduled_start_datetime >= endTime.valueOf()
+          && order.order_date === _rowData.order_date
   })
 }
 

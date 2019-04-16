@@ -96,6 +96,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
       utils.post(influx.writeUrl, line).then(function (res) {
         utils.alert('success', 'Success', 'Order has been marked as ' + action);
         closeForm();
+        tableCtrl.refreshDashboard();
       }).catch(function (e) {
         utils.alert('error', 'Database Error', 'An error occurred while writing data to the influxdb, please check the basebase connection');
         closeForm();

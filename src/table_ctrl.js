@@ -203,9 +203,7 @@ export class TableCtrl extends MetricsPanelCtrl {
 
   render() {
     this.table = transformDataToTable(this.dataRaw, this.panel);
-    // console.log(this.panel.sort);
     this.table.sort(this.panel.sort);
-    // console.log(this.panel.sort);
     this.renderer = new TableRenderer(
       this.panel,
       this.table,
