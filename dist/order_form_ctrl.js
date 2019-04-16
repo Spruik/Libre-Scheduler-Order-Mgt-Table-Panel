@@ -1,9 +1,36 @@
 'use strict';
 
-System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', './libs/bootstrap-datepicker', './libs/bootstrap-timepicker'], function (_export, _context) {
+System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', './libs/bootstrap-datepicker', './libs/bootstrap-timepicker', './influxHelper', './table_ctrl'], function (_export, _context) {
   "use strict";
 
-  var utils, moment, appEvents, enableInstantSearch, bootstrap_datepicker, bootstrap_timepicker, products, equipment, rowData, tryCatchCount, _orderDurationHours;
+  var utils, moment, appEvents, enableInstantSearch, bootstrap_datepicker, bootstrap_timepicker, influx, tableCtrl, closeForm, products, equipment, _rowData, _ordersBeingAffected, _allData, tryCatchCount, _orderDurationHours;
+
+  function _toConsumableArray(arr) {
+    if (Array.isArray(arr)) {
+      for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+        arr2[i] = arr[i];
+      }
+
+      return arr2;
+    } else {
+      return Array.from(arr);
+    }
+  }
+
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  }
 
   /**
    * This function is the entry point to show the order editing form
@@ -12,9 +39,10 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    * This 'data' is not empty when the user clicks the row to edit the order, and the form will be pre-fill based on the data passed in
    * @param {*} data
    */
-  function showOrderEditingForm(data) {
+  function showOrderEditingForm(data, alldata) {
 
-    rowData = data;
+    _rowData = data;
+    _allData = alldata;
 
     getProductsAndEquipments(callback);
 
@@ -114,16 +142,16 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    * Pre-fiil the information when it comes with data (When the user clicks the row)
    */
   function prefillData() {
-    if (rowData) {
+    if (_rowData) {
       // console.log('need to pre-fill')
-      $('input.ord-mgt-datalist-input#order-id').val(rowData.order_id);
-      $('input.ord-mgt-datalist-input#order-qty').val(rowData.order_qty);
-      $('input.ord-mgt-datalist-input#datalist-input-production-line').val(rowData.production_line);
-      $('input.ord-mgt-datalist-input#datalist-input-products').val(rowData.product_id + ' | ' + rowData.product_desc);
-      $('input.ord-mgt-datalist-input#datepicker').val(rowData.order_date);
-      $('input.ord-mgt-datalist-input#planned-rate').val(rowData.planned_rate);
-      $('input.ord-mgt-datalist-input#changeover-minutes-picker').val(rowData.planned_changeover_time);
-      updateDuration(rowData.order_qty, rowData.planned_rate);
+      $('input.ord-mgt-datalist-input#order-id').val(_rowData.order_id);
+      $('input.ord-mgt-datalist-input#order-qty').val(_rowData.order_qty);
+      $('input.ord-mgt-datalist-input#datalist-input-production-line').val(_rowData.production_line);
+      $('input.ord-mgt-datalist-input#datalist-input-products').val(_rowData.product_id + ' | ' + _rowData.product_desc);
+      $('input.ord-mgt-datalist-input#datepicker').val(_rowData.order_date);
+      $('input.ord-mgt-datalist-input#planned-rate').val(_rowData.planned_rate);
+      $('input.ord-mgt-datalist-input#changeover-minutes-picker').val(_rowData.planned_changeover_time);
+      updateDuration(_rowData.order_qty, _rowData.planned_rate);
     }
   }
 
@@ -198,7 +226,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    */
   function submitOrder(data) {
 
-    var inputValues = {
+    var inputValues = _defineProperty({
       orderId: data[0].value,
       orderQty: data[1].value,
       productionLine: data[2].value,
@@ -206,64 +234,211 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
       date: data[4].value,
       plannedRate: data[5].value,
       duration: data[6].value,
-      changeover: data[7].value
-    };
+      changeover: data[7].value,
+      scheduled_end_datetime: _rowData.scheduled_start_datetime
+    }, 'scheduled_end_datetime', _rowData.scheduled_end_datetime);
 
     if (isValueValid(inputValues)) {
-      var url = utils.influxHost + 'write?db=smart_factory';
-      if (hasTagsChanged(inputValues)) {
-        updateWithTagsChanged(url, inputValues);
+      updateOrder(inputValues);
+    }
+  }
+
+  function updateOrder(inputValues) {
+    //the orders that are in the original line that this order was in and that are being affected because this order changes line
+    var ordersBeingAffected = getOrdersBeingAffect(_allData, inputValues);
+    _ordersBeingAffected = ordersBeingAffected;
+
+    if (!isLineHavingSpareTimeForTheDay(_allData, inputValues, _rowData)) {
+      utils.alert('warning', 'Warning', "There is no spare space for this order to fit in this date's schedule");
+      return;
+    }
+
+    if (hasTagsChanged(inputValues)) {
+      updateOldAndNewOrders(inputValues);
+    } else {
+      //in here, check if the line has changed, if yes, meaning that the order is going to another line
+      //so also update all affectingOrders(orders that are in the original line and that are after this order)
+      if (isLineChanged(inputValues)) {
+        //save the order directly with removing its starttime and endtime to let the initialiser to init it again
+        //coz it is changing line, so just simply remove the start time and end time
+        updateWithRemoving(inputValues);
       } else {
-        updateWithTagsUnchanged(url, inputValues);
+        //save the order directly with changing its starttime and endtime
+        if (isDateChanged(inputValues)) {
+          updateWithRemoving(inputValues);
+        } else {
+          updateWithChanging(inputValues);
+        }
       }
     }
   }
 
-  /**
-   * Send Post request to write the influxdb with the url passed in and the line later created
-   * Create a new record with the validated input
-   * Update the old record as 'Replaced'
-   * Stop and prompt error when it fails
-   * @param {*} url 
-   * @param {*} input 
-   */
-  function updateWithTagsChanged(url, input) {
+  function updateOldAndNewOrders(inputValues) {
+    var line = influx.writeLineForUpdate('Replaced', _rowData);
 
-    var newLine = writeInfluxLine(input);
-    var oldLine = writeOldInfluxLine();
-    utils.post(url, newLine).then(function () {
-      utils.post(url, oldLine).then(function () {
-        utils.alert('success', 'Success', 'Order has been successfully updated');
-        $('#order-mgt-scheduler-form-cancelBtn').trigger('click');
-      }).catch(function (error) {
-        console.log(error);
-        utils.alert('error', 'Database Error', 'An error occurred while updating data to the influxdb, please check the basebase connection');
-        $('#order-mgt-scheduler-form-cancelBtn').trigger('click');
-      });
-    }).catch(function (error) {
-      console.log(error);
-      utils.alert('error', 'Database Error', 'An error occurred while updating data to the influxdb, please check the basebase connection');
-      $('#order-mgt-scheduler-form-cancelBtn').trigger('click');
+    utils.post(influx.writeUrl, line).then(function (res) {
+      //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
+      //becuase this is the first
+      if (isLineChanged(inputValues)) {
+        updateWithRemoving(inputValues);
+      } else {
+        if (isDateChanged(inputValues)) {
+          updateWithRemoving(inputValues);
+        } else {
+          updateWithChanging(inputValues);
+        }
+      }
+    }).catch(function (e) {
+      closeForm();
+      utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
+    });
+  }
+
+  function isDateChanged(inputValues) {
+    return _rowData.order_date !== inputValues.date;
+  }
+
+  /**
+   * Take the user input, send request to change the current order to be what the user has entered in the edition form
+   * It normally changes the current order's starttime and endtime because the order is being changed
+   * @param {*} inputValues User input
+   */
+  function updateWithChanging(inputValues) {
+    var originalStartTime = _rowData.scheduled_start_datetime;
+    //The difference between the original changeover and the edited changeover
+    var changeoverDiff = moment.duration(inputValues.changeover).subtract(moment.duration(_rowData.planned_changeover_time));
+    var startTime = moment(originalStartTime).add(changeoverDiff);
+    var duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours');
+    var endTime = moment(originalStartTime).add(changeoverDiff).add(duration);
+
+    //calc the difference between the edited order's total duration and the original order's total duration
+    //so that all the affected orders know how many to add/subtract
+    var oldTotal = moment.duration(_rowData.order_qty / _rowData.planned_rate, 'hours').add(moment.duration(_rowData.planned_changeover_time));
+    var newTotal = duration.add(moment.duration(inputValues.changeover));
+    var difference = oldTotal.subtract(newTotal);
+
+    var line = influx.writeLineForUpdateWithChangingTime(inputValues, _rowData.status, startTime.valueOf(), endTime.valueOf());
+    utils.post(influx.writeUrl, line).then(function (res) {
+      updateAffectedOrders(inputValues, difference);
+    }).catch(function (e) {
+      closeForm();
+      utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
     });
   }
 
   /**
-   * Send Post request to write the influxdb with the url passed in and the line later created
-   * Simply update the record
-   * Stop and prompt error when it fails
-   * @param {*} url 
-   * @param {*} input 
+   * Take the user input, send request to change the current order to be what the user has entered in the edition form
+   * It will remove the order's start time and end time because it is changing line so that no order will be affected in the changing line
+   * and so that the start time and end time can be removed, and then let the initialiser to init the time again.
+   * @param {*} inputValues The user input
    */
-  function updateWithTagsUnchanged(url, input) {
+  function updateWithRemoving(inputValues) {
+    var line = influx.writeLineForUpdateWithRemovingTime(inputValues, _rowData ? _rowData.status : 'Planned');
 
-    var line = writeInfluxLine(input);
-    utils.post(url, line).then(function (res) {
-      utils.alert('success', 'Success', rowData !== '' && rowData !== undefined ? 'Order has been successfully updated' : 'Order has been successfully created');
-      $('#order-mgt-scheduler-form-cancelBtn').trigger('click');
+    utils.post(influx.writeUrl, line).then(function (res) {
+      if (_ordersBeingAffected.length > 0) {
+        var difference = getDiff(inputValues);
+        updateAffectedOrders(inputValues, difference);
+      } else {
+        closeForm();
+        utils.alert('success', 'Successful', 'Order has been successfully updated');
+        tableCtrl.refreshDashboard();
+      }
     }).catch(function (e) {
-      console.log(e);
-      utils.alert('error', 'Database Error', 'An error occurred while updating data to the influxdb, please check the basebase connection');
-      $('#order-mgt-scheduler-form-cancelBtn').trigger('click');
+      closeForm();
+      utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
+    });
+  }
+
+  /**
+   * Take the time difference, send request to add/subtract the time diff for all the affected orders due to -
+   * the edited order being changed or removed from the current line and date
+   * @param {*} inputValues The user input
+   * @param {*} difference The time difference that all affected orders will need to add/subtract
+   */
+  function updateAffectedOrders(inputValues, difference) {
+    var promises = [];
+    _ordersBeingAffected.forEach(function (order) {
+      var line = influx.writeLineForTimeUpdate(order, difference, 'subtract');
+      var prom = utils.post(influx.writeUrl, line);
+      promises.push(prom);
+    });
+    Promise.all(promises).then(function (res) {
+      closeForm();
+      utils.alert('success', 'Successful', 'Order has been successfully updated');
+      tableCtrl.refreshDashboard();
+    }).catch(function (e) {
+      closeForm();
+      utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
+    });
+  }
+
+  /**
+   * Take inputValues and find the qty and rate to calc the duration
+   * then return duration + changeover duration
+   * @param {*} inputValues User input for the form
+   */
+  function getDiff(inputValues) {
+    var diff = void 0;
+    var duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours');
+    var changeover = moment.duration(inputValues.changeover, 'H:mm:ss');
+    diff = duration.add(changeover);
+    return diff;
+  }
+
+  function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
+
+    //all orders in the targeting line (except the editing order itself (if line not changed))
+    var affectedOrders = allData.filter(function (order) {
+      return order.production_line === inputValues.productionLine && order.order_date === inputValues.date;
+    });
+    affectedOrders = affectedOrders.filter(function (order) {
+      return order.order_id !== rowData.order_id;
+    });
+
+    //find the line's default start time and then plus next day
+    var targetDayStartTime = moment(moment(inputValues.date, 'YYYY-MM-DD').format('YYYY-MM-DD') + ' ' + utils.getLineStartTime(rowData.production_line), 'YYYY-MM-DD H:mm:ss');
+    var targetDayStartTimeText = targetDayStartTime.format('YYYY-MM-DD H:mm:ss');
+    var nextDayStartTime = moment(targetDayStartTimeText, 'YYYY-MM-DD H:mm:ss').add(1, 'days');
+
+    //calc edited order's duration
+    var duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours');
+    var changeover = moment.duration(inputValues.changeover, 'H:mm:ss');
+    var totalDur = duration.add(changeover);
+
+    //if no affected orders, see if target dat start time + totaldur <= nextdatstarttime
+    if (affectedOrders.length === 0) {
+      return targetDayStartTime.add(totalDur).isSameOrBefore(nextDayStartTime);
+    }
+
+    //get the max end time
+    var all_end_times = affectedOrders.map(function (order) {
+      return order.scheduled_end_datetime;
+    });
+    var maxEndTime = moment(Math.max.apply(Math, _toConsumableArray(all_end_times)));
+    maxEndTime.add(totalDur);
+
+    return maxEndTime.isSameOrBefore(nextDayStartTime);
+  }
+
+  /**
+   * get alldata and the user input to filter all affected orders.
+   * These orders will be the ones that are in the original line with the same date.
+   * @param {*} allData All the orders that is being passed in and displayed in this panel
+   * @param {*} inputValues Inputs that the user entered in this order edition form
+   */
+  function getOrdersBeingAffect(allData, inputValues) {
+    var ordersInOriginalLineAndDate = allData.filter(function (order) {
+      return order.production_line === _rowData.production_line && order.order_date === _rowData.order_date;
+    });
+    console.log(ordersInOriginalLineAndDate);
+
+    return ordersInOriginalLineAndDate.filter(function (order) {
+      var endTime = moment(inputValues.scheduled_end_datetime);
+      console.log('hh');
+      console.log(moment(order.scheduled_start_datetime).format('YYYY-MM-DD H:mm:ss'));
+      console.log(endTime.format('YYYY-MM-DD H:mm:ss'));
+      return order.scheduled_start_datetime >= endTime.valueOf();
     });
   }
 
@@ -275,13 +450,22 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    */
   function hasTagsChanged(inputs) {
 
-    if (!rowData) {
+    if (!_rowData) {
       //if there is no rowData, meaning that the user is creating a new order, so return false
       return false;
     }
     var product_id = inputs.product.split(' | ')[0];
     var product_desc = inputs.product.split(' | ')[1];
-    return inputs.orderId !== rowData.order_id || product_id !== rowData.product_id || product_desc !== rowData.product_desc;
+    return inputs.orderId !== _rowData.order_id || product_id !== _rowData.product_id || product_desc !== _rowData.product_desc;
+  }
+
+  /**
+   * Compares the user input and the original order to see if the line has been changed.
+   * return true if it is.
+   * @param {*} inputValues The user input
+   */
+  function isLineChanged(inputValues) {
+    return inputValues.productionLine !== _rowData.production_line;
   }
 
   /**
@@ -348,79 +532,6 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     return true;
   }
 
-  /**
-   * Expect the validated user inputs
-   * Write line to update the record with the user inputs passed in
-   * @param {*} data 
-   */
-  function writeInfluxLine(data) {
-    var product_id = data.product.split(' | ')[0];
-    var product_desc = data.product.split(' | ')[1];
-
-    //For influxdb tag keys, must add a forward slash \ before each space 
-    product_desc = product_desc.split(' ').join('\\ ');
-
-    var line = 'OrderPerformance,order_id=' + data.orderId + ',product_id=' + product_id + ',product_desc=' + product_desc + ' ';
-
-    //+ ',production_line=' + data.productionLine
-
-    if (rowData) {
-      if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-        line += 'compl_qty=' + rowData.completion_qty + ',';
-      }
-      if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
-        line += 'machine_state="' + rowData.machine_state + '"' + ',';
-      }
-      if (rowData.scrap_qty !== null && rowData.scrap_qty !== undefined) {
-        line += 'scrap_qty=' + rowData.scrap_qty + ',';
-      }
-    }
-
-    line += 'order_state="' + 'Planned' + '"' + ',';
-    line += 'order_date="' + data.date + '"' + ',';
-    line += 'production_line="' + data.productionLine + '"' + ',';
-    line += 'planned_changeover_time="' + data.changeover + '"' + ',';
-    line += 'order_qty=' + data.orderQty + ',';
-    line += 'setpoint_rate=' + 0 + ',';
-    line += 'planned_rate=' + data.plannedRate;
-
-    // console.log(line);
-    return line;
-  }
-
-  /**
-   * Write line to changed the record's status to 'Replaced'
-   */
-  function writeOldInfluxLine() {
-    //For influxdb tag keys, must add a forward slash \ before each space 
-    var product_desc = rowData.product_desc.split(' ').join('\\ ');
-
-    var line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' ';
-
-    if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-      line += 'completion_qty=' + rowData.completion_qty + ',';
-    }
-    if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
-      line += 'machine_state="' + rowData.machine_state + '"' + ',';
-    }
-    if (rowData.scrap_qty !== null && rowData.scrap_qty !== undefined) {
-      line += 'scrap_qty=' + rowData.scrap_qty + ',';
-    }
-    if (rowData.setpoint_rate !== null && rowData.setpoint_rate !== undefined) {
-      line += 'setpoint_rate=' + rowData.setpoint_rate + ',';
-    }
-
-    line += 'order_state="' + 'Replaced' + '"' + ',';
-    line += 'order_date="' + rowData.order_date + '"' + ',';
-    line += 'production_line="' + rowData.production_line + '"' + ',';
-    line += 'planned_changeover_time="' + rowData.planned_changeover_time + '"' + ',';
-    line += 'order_qty=' + rowData.order_qty + ',';
-    line += 'planned_rate=' + rowData.planned_rate;
-
-    // console.log(line);
-    return line;
-  }
-
   return {
     setters: [function (_utils) {
       utils = _utils;
@@ -434,11 +545,21 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
       bootstrap_datepicker = _libsBootstrapDatepicker;
     }, function (_libsBootstrapTimepicker) {
       bootstrap_timepicker = _libsBootstrapTimepicker;
+    }, function (_influxHelper) {
+      influx = _influxHelper;
+    }, function (_table_ctrl) {
+      tableCtrl = _table_ctrl;
     }],
     execute: function () {
+      closeForm = function closeForm() {
+        return $('#order-mgt-scheduler-form-close-btn').trigger('click');
+      };
+
       products = void 0;
       equipment = void 0;
-      rowData = void 0;
+      _rowData = void 0;
+      _ordersBeingAffected = void 0;
+      _allData = void 0;
       tryCatchCount = 1;
       _orderDurationHours = void 0;
 

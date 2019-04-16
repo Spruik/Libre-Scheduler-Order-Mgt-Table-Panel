@@ -1,8 +1,14 @@
 import { showOrderEditingForm } from './order_form_ctrl'
 import { appEvents } from 'app/core/core'
 import * as utils from './utils'
+import * as tableCtrl from './table_ctrl'
+import * as influx from './influxHelper'
+import moment from 'moment'
 
-let rowData
+
+let _rowData
+let _allData
+
 const closeForm = () => {
   $('a#order-mgt-scheduler-action-option-close-btn').trigger('click')
 }
@@ -19,80 +25,37 @@ const closeForm = () => {
 function showActionOptionsForm(productionLine, orderId, productDesc, productId){
   //get data
   let tags = {prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId}
-  getRowData(callback, tags)
+  _allData = tableCtrl.allData()
+  _rowData = getRowData(_allData, tags)
 
-  function callback(){
-    if(rowData.order_state.toLowerCase() !== 'planned' && rowData.order_state.toLowerCase() !== 'ready'){
-      utils.alert('warning', 'Warning', 'This order is ' + rowData.order_state + ' and is no longer available for editing')
-      return
-    }
-
-    appEvents.emit('show-modal', {
-      src: 'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/action_options.html',
-      modalClass: 'confirm-modal',
-      model: {}
-    })
-
-    removeListeners()
-    addListeners()
-  }
-}
-
-/**
- * Get the record data with the tag values passed in
- * Call the callback function once it is finished
- * Stop and prompt error when it fails
- * @param {*} callback 
- * @param {*} tags 
- */
-function getRowData(callback, tags){
-  const url = getInfluxLine(tags)
-  console.log(url);
-  console.log(tags);
-  utils.get(url).then(res => {
-    rowData = formatData(res)
-    // console.log(rowData)
-    callback()
-  }).catch(e => {
-    utils.alert('error', 'Error', 'An error occurred while getting data from the database, please try agian')
-    console.log(e)
-  })
-}
-
-/**
- * Write line for the influxdb query
- * @param {*} tags 
- */
-function getInfluxLine(tags){
-  const desc = tags.prodDesc.split('\'').join('\\\'')
-  let url = utils.influxHost + 'query?pretty=true&db=smart_factory&q=select * from OrderPerformance' + ' where '
-  url += 'production_line=' + '\'' + tags.prodLine + '\'' + ' and '
-  url += 'order_id=' + '\'' + tags.orderId + '\'' + ' and '
-  url += 'product_desc=' + '\'' + desc + '\'' + ' and '
-  url += 'product_id=' + '\'' + tags.prodId + '\''
-
-  // console.log(url)
+  console.log(_rowData);
+  console.log(_allData);
   
-  return url
+  if(_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready'){
+    utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing')
+    return
+  }
+
+  appEvents.emit('show-modal', {
+    src: 'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/action_options.html',
+    modalClass: 'confirm-modal',
+    model: {}
+  })
+
+  removeListeners()
+  addListeners()
 }
 
 /**
- * The params may contain more than one row record
- * This is to fomrat the http response into a better structure
- * And also filter out the latest record
- * @param {*} res 
+ * Use the tags to filter out the clicked order data from all data
+ * And return it
+ * @param {*} allData All orders
+ * @param {*} tags The tags of the order that is clicked
  */
-function formatData(res){
-  let cols = res.results[0].series[0].columns
-  let rows = res.results[0].series[0].values
-  let row = rows[rows.length - 1]
-
-  let data = {}
-  for (let i = 0; i < cols.length; i++) {
-    const col = cols[i];
-    data[col] = row[i]
-  }
-  return data
+function getRowData(allData, tags){
+  return allData.filter(order => order.production_line === tags.prodLine 
+    && order.order_id === tags.orderId 
+    && order.product_id === tags.prodId)[0]
 }
 
 /**
@@ -105,9 +68,9 @@ function addListeners() {
   $(document).on('click', 'input[type="radio"][name="order-mgt-scheduler-actions-radio"]', e => {
     
     if (e.target.id === 'edit') {
-      showOrderEditingForm(rowData)
+      showOrderEditingForm(_rowData, _allData)
     }else if (e.target.id === 'release') {
-      if (rowData.order_state === 'Ready') {
+      if (_rowData.status === 'Ready') {
         utils.alert('warning', 'Warning', 'Order has already been released')
         closeForm()
       }else {
@@ -136,14 +99,49 @@ function removeListeners() {
  */
 function updateOrder(action) {
   const line = writeInfluxLine(action)
-  const url = utils.influxHost + 'write?db=smart_factory'
-  utils.post(url, line).then(res => {
-    utils.alert('success', 'Success', 'Order has been marked as ' + action)
+  if (action === 'Deleted') {
+    deleteCurrentAndUpdateAffectOrders(line)
+  }else{
+    utils.post(influx.writeUrl, line).then(res => {
+      utils.alert('success', 'Success', 'Order has been marked as ' + action)
+      closeForm()
+    }).catch(e => {
+      utils.alert('error', 'Database Error', 'An error occurred while writing data to the influxdb, please check the basebase connection')
+      closeForm()
+      console.log(e)
+    })
+  }
+}
+
+function deleteCurrentAndUpdateAffectOrders(line){
+  //create promises array and put the 'delete current order request' into it first
+  let promises = [utils.post(influx.writeUrl, line)]
+
+  //get all orders data for further filtering
+  const allData = tableCtrl.allData()
+
+  //filter affected orders using all orders data
+  //affected orders = order.startTime >= thisOrder.endtime && in the same line && with the same date.
+  const affectedOrders = allData.filter(order => order.scheduled_start_datetime >= _rowData.scheduled_end_datetime && order.production_line === _rowData.production_line && order.order_date === _rowData.order_date)
+  
+  //work out thisOrder's total duration, which = its duration + its changeover duration
+  const deletingOrderDurationHour = moment.duration(_rowData.order_qty / _rowData.planned_rate, 'hours') 
+  const deletingOrderChangeover = moment.duration(_rowData.planned_changeover_time, 'H:mm:ss')
+  const deletingOrderTotalDur = deletingOrderDurationHour.add(deletingOrderChangeover)
+  
+  //loop affected orders, order's starttime and endtime should both subtract the total duration worked out
+  affectedOrders.forEach(order => {
+    const line = influx.writeLineForTimeUpdate(order, deletingOrderTotalDur, 'subtract')
+    promises.push(utils.post(influx.writeUrl, line))
+  })
+
+  Promise.all(promises).then(() => {
+    utils.alert('success', 'Success', 'Order has been marked as Deleted')
     closeForm()
+    tableCtrl.refreshDashboard()
   }).catch(e => {
-    utils.alert('error', 'Database Error', 'An error occurred while fetching data from the postgresql, please check the basebase connection')
+    utils.alert('error', 'Database Error', 'An error occurred while deleting the order : ' + e)
     closeForm()
-    console.log(e)
   })
 }
 
@@ -154,28 +152,34 @@ function updateOrder(action) {
  */
 function writeInfluxLine(status){
   //For influxdb tag keys, must add a forward slash \ before each space 
-  let product_desc = rowData.product_desc.split(' ').join('\\ ')
+  let product_desc = _rowData.product_desc.split(' ').join('\\ ')
 
-  let line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' '
+  let line = 'OrderPerformance,order_id=' + _rowData.order_id + ',product_id=' + _rowData.product_id + ',product_desc=' + product_desc + ' '
 
-  if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-    line += 'completion_qty=' + rowData.completion_qty + ','
+  if (_rowData.compl_qty !== null && _rowData.compl_qty !== undefined) {
+    line += 'compl_qty=' + _rowData.compl_qty + ','
   }
-  if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
-    line += 'machine_state="' + rowData.machine_state + '"' + ','
+  if (_rowData.machine_state !== null && _rowData.machine_state !== undefined) {
+    line += 'machine_state="' + _rowData.machine_state + '"' + ','
   }
-  if (rowData.scrap_qty !== null && rowData.scrap_qty !== undefined) {
-    line += 'scrap_qty=' + rowData.scrap_qty + ','
+  if (_rowData.scrap_qty !== null && _rowData.scrap_qty !== undefined) {
+    line += 'scrap_qty=' + _rowData.scrap_qty + ','
   }
-  if (rowData.setpoint_rate !== null && rowData.setpoint_rate !== undefined) {
-    line += 'setpoint_rate=' + rowData.setpoint_rate + ','
+  if (_rowData.setpoint_rate !== null && _rowData.setpoint_rate !== undefined) {
+    line += 'setpoint_rate=' + _rowData.setpoint_rate + ','
+  }
+
+  if (_rowData.scheduled_end_datetime !== null && _rowData.scheduled_end_datetime !== undefined) {
+    line += 'scheduled_end_datetime=' + _rowData.scheduled_end_datetime + ','
+    line += 'scheduled_start_datetime=' + _rowData.scheduled_start_datetime + ','
   }
 
   line += 'order_state="' + status + '"' + ','
-  line += 'order_date="' + rowData.order_date + '"' + ','
-  line += 'production_line="' + rowData.production_line + '"' + ','
-  line += 'order_qty=' + rowData.order_qty + ','
-  line += 'planned_rate=' + rowData.planned_rate
+  line += 'order_date="' + _rowData.order_date + '"' + ','
+  line += 'planned_changeover_time="' + _rowData.planned_changeover_time + '"' + ','
+  line += 'production_line="' + _rowData.production_line + '"' + ','
+  line += 'order_qty=' + _rowData.order_qty + ','
+  line += 'planned_rate=' + _rowData.planned_rate
 
 //   console.log(line);
   return line

@@ -3,7 +3,19 @@
 System.register(['app/core/core'], function (_export, _context) {
   "use strict";
 
-  var appEvents, hostname, postgRestHost, influxHost, post, get, alert, distinctElems;
+  var appEvents, hostname, postgRestHost, influxHost, post, get, alert, distinctElems, reconstruct;
+
+
+  /**
+   * pass in the line, return the line's default start time
+   * @param {*} line 
+   */
+  function getLineStartTime(line) {
+    return '6:00:00';
+  }
+
+  _export('getLineStartTime', getLineStartTime);
+
   return {
     setters: [function (_appCoreCore) {
       appEvents = _appCoreCore.appEvents;
@@ -85,6 +97,29 @@ System.register(['app/core/core'], function (_export, _context) {
       });
 
       _export('distinctElems', distinctElems);
+
+      _export('reconstruct', reconstruct = function reconstruct(data) {
+
+        if (data.length === 0) {
+          return data;
+        }
+
+        var cols = data[0].columns;
+        var rows = data[0].rows;
+
+        var result = [];
+        rows.forEach(function (row) {
+          var obj = {};
+          cols.forEach(function (col, k) {
+            obj[col.text] = row[k];
+          });
+          result.push(obj);
+        });
+
+        return result;
+      });
+
+      _export('reconstruct', reconstruct);
     }
   };
 });

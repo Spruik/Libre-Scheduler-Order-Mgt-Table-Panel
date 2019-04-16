@@ -4,10 +4,16 @@ import { appEvents } from 'app/core/core'
 import { enableInstantSearch } from './instant_search_ctrl'
 import  * as bootstrap_datepicker  from './libs/bootstrap-datepicker'
 import  * as bootstrap_timepicker  from './libs/bootstrap-timepicker'
+import * as influx from './influxHelper'
+import * as tableCtrl from './table_ctrl'
+
+const closeForm = () => $('#order-mgt-scheduler-form-close-btn').trigger('click')
 
 let products
 let equipment
-let rowData
+let _rowData
+let _ordersBeingAffected
+let _allData
 let tryCatchCount = 1
 let _orderDurationHours
 
@@ -18,10 +24,11 @@ let _orderDurationHours
  * This 'data' is not empty when the user clicks the row to edit the order, and the form will be pre-fill based on the data passed in
  * @param {*} data
  */
-function showOrderEditingForm (data) {
+function showOrderEditingForm (data, alldata) {
 
-  rowData = data
-  
+  _rowData = data
+  _allData = alldata
+
   getProductsAndEquipments(callback)
 
   function callback () {
@@ -124,16 +131,16 @@ function getProductsAndEquipments (callback) {
  * Pre-fiil the information when it comes with data (When the user clicks the row)
  */
 function prefillData(){
-  if (rowData) {
+  if (_rowData) {
     // console.log('need to pre-fill')
-    $('input.ord-mgt-datalist-input#order-id').val(rowData.order_id)
-    $('input.ord-mgt-datalist-input#order-qty').val(rowData.order_qty)
-    $('input.ord-mgt-datalist-input#datalist-input-production-line').val(rowData.production_line)
-    $('input.ord-mgt-datalist-input#datalist-input-products').val(rowData.product_id + ' | ' + rowData.product_desc)
-    $('input.ord-mgt-datalist-input#datepicker').val(rowData.order_date)
-    $('input.ord-mgt-datalist-input#planned-rate').val(rowData.planned_rate)
-    $('input.ord-mgt-datalist-input#changeover-minutes-picker').val(rowData.planned_changeover_time)
-    updateDuration(rowData.order_qty, rowData.planned_rate)
+    $('input.ord-mgt-datalist-input#order-id').val(_rowData.order_id)
+    $('input.ord-mgt-datalist-input#order-qty').val(_rowData.order_qty)
+    $('input.ord-mgt-datalist-input#datalist-input-production-line').val(_rowData.production_line)
+    $('input.ord-mgt-datalist-input#datalist-input-products').val(_rowData.product_id + ' | ' + _rowData.product_desc)
+    $('input.ord-mgt-datalist-input#datepicker').val(_rowData.order_date)
+    $('input.ord-mgt-datalist-input#planned-rate').val(_rowData.planned_rate)
+    $('input.ord-mgt-datalist-input#changeover-minutes-picker').val(_rowData.planned_changeover_time)
+    updateDuration(_rowData.order_qty, _rowData.planned_rate)
   }
 }
 
@@ -212,68 +219,205 @@ function submitOrder(data) {
     date: data[4].value, 
     plannedRate: data[5].value,
     duration: data[6].value,
-    changeover: data[7].value
+    changeover: data[7].value,
+    scheduled_end_datetime: _rowData.scheduled_start_datetime,
+    scheduled_end_datetime: _rowData.scheduled_end_datetime
   }
 
   if (isValueValid(inputValues)) {
-    const url = utils.influxHost + 'write?db=smart_factory'
-    if (hasTagsChanged(inputValues)) {
-      updateWithTagsChanged(url, inputValues)
-    }else {
-      updateWithTagsUnchanged(url, inputValues)
-    }
+    updateOrder(inputValues)
+  }
+}
+
+function updateOrder(inputValues){
+  //the orders that are in the original line that this order was in and that are being affected because this order changes line
+  const ordersBeingAffected = getOrdersBeingAffect(_allData, inputValues)  
+  _ordersBeingAffected = ordersBeingAffected
+
+  if (!isLineHavingSpareTimeForTheDay(_allData, inputValues, _rowData)) {
+    utils.alert('warning', 'Warning', "There is no spare space for this order to fit in this date's schedule")
+    return
   }
 
+  if (hasTagsChanged(inputValues)) {
+    updateOldAndNewOrders(inputValues)
+  }else {
+    //in here, check if the line has changed, if yes, meaning that the order is going to another line
+    //so also update all affectingOrders(orders that are in the original line and that are after this order)
+    if (isLineChanged(inputValues)) {
+      //save the order directly with removing its starttime and endtime to let the initialiser to init it again
+      //coz it is changing line, so just simply remove the start time and end time
+      updateWithRemoving(inputValues)
+    }else{
+      //save the order directly with changing its starttime and endtime
+      if (isDateChanged(inputValues)) {
+        updateWithRemoving(inputValues)
+      }else{
+        updateWithChanging(inputValues)
+      }
+    }
+  }
 }
 
-/**
- * Send Post request to write the influxdb with the url passed in and the line later created
- * Create a new record with the validated input
- * Update the old record as 'Replaced'
- * Stop and prompt error when it fails
- * @param {*} url 
- * @param {*} input 
- */
-function updateWithTagsChanged(url, input){
-
-  const newLine = writeInfluxLine(input)
-  const oldLine = writeOldInfluxLine()
-  utils.post(url, newLine).then(() => {
-    utils.post(url, oldLine).then(() => {
-      utils.alert('success', 'Success', 'Order has been successfully updated')
-      $('#order-mgt-scheduler-form-cancelBtn').trigger('click')
-    }).catch(error => {
-      console.log(error)
-      utils.alert('error', 'Database Error', 'An error occurred while updating data to the influxdb, please check the basebase connection')
-      $('#order-mgt-scheduler-form-cancelBtn').trigger('click')
-    })
-  }).catch(error => {
-      console.log(error)
-      utils.alert('error', 'Database Error', 'An error occurred while updating data to the influxdb, please check the basebase connection')
-      $('#order-mgt-scheduler-form-cancelBtn').trigger('click')
-  })
-
-}
-
-/**
- * Send Post request to write the influxdb with the url passed in and the line later created
- * Simply update the record
- * Stop and prompt error when it fails
- * @param {*} url 
- * @param {*} input 
- */
-function updateWithTagsUnchanged(url, input){
-
-  const line = writeInfluxLine(input)
-  utils.post(url, line).then(res => {
-    utils.alert('success', 'Success', (rowData !== '' && rowData !== undefined) ? 'Order has been successfully updated' : 'Order has been successfully created')
-    $('#order-mgt-scheduler-form-cancelBtn').trigger('click')
+function updateOldAndNewOrders(inputValues){
+  const line = influx.writeLineForUpdate('Replaced', _rowData)
+  
+  utils.post(influx.writeUrl, line).then(res => {
+    //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
+    //becuase this is the first
+    if (isLineChanged(inputValues)) {
+      updateWithRemoving(inputValues)
+    }else {
+      if (isDateChanged(inputValues)) {
+        updateWithRemoving(inputValues)
+      }else{
+        updateWithChanging(inputValues)
+      }
+    }
   }).catch(e => {
-    console.log(e)
-    utils.alert('error', 'Database Error', 'An error occurred while updating data to the influxdb, please check the basebase connection')
-    $('#order-mgt-scheduler-form-cancelBtn').trigger('click')
+    closeForm()
+    utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e)
   })
+}
 
+function isDateChanged(inputValues){
+  return _rowData.order_date !== inputValues.date
+}
+
+/**
+ * Take the user input, send request to change the current order to be what the user has entered in the edition form
+ * It normally changes the current order's starttime and endtime because the order is being changed
+ * @param {*} inputValues User input
+ */
+function updateWithChanging(inputValues) {
+  const originalStartTime = _rowData.scheduled_start_datetime
+  //The difference between the original changeover and the edited changeover
+  const changeoverDiff = moment.duration(inputValues.changeover).subtract(moment.duration(_rowData.planned_changeover_time))
+  const startTime = moment(originalStartTime).add(changeoverDiff)
+  const duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours')
+  const endTime = moment(originalStartTime).add(changeoverDiff).add(duration)
+
+  //calc the difference between the edited order's total duration and the original order's total duration
+  //so that all the affected orders know how many to add/subtract
+  const oldTotal = moment.duration(_rowData.order_qty / _rowData.planned_rate, 'hours').add(moment.duration(_rowData.planned_changeover_time))
+  const newTotal = duration.add(moment.duration(inputValues.changeover))
+  const difference = oldTotal.subtract(newTotal)
+  
+  const line = influx.writeLineForUpdateWithChangingTime(inputValues, _rowData.status, startTime.valueOf(), endTime.valueOf())
+  utils.post(influx.writeUrl, line).then(res => {
+    updateAffectedOrders(inputValues, difference)
+  }).catch(e => {
+    closeForm()
+    utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e)
+  })
+}
+
+/**
+ * Take the user input, send request to change the current order to be what the user has entered in the edition form
+ * It will remove the order's start time and end time because it is changing line so that no order will be affected in the changing line
+ * and so that the start time and end time can be removed, and then let the initialiser to init the time again.
+ * @param {*} inputValues The user input
+ */
+function updateWithRemoving(inputValues){
+  const line = influx.writeLineForUpdateWithRemovingTime(inputValues, _rowData ? _rowData.status : 'Planned')
+  
+  utils.post(influx.writeUrl, line).then(res => {
+    if (_ordersBeingAffected.length > 0) {
+      const difference = getDiff(inputValues)
+      updateAffectedOrders(inputValues, difference)
+    }else {
+      closeForm()
+      utils.alert('success', 'Successful', 'Order has been successfully updated')
+      tableCtrl.refreshDashboard()
+    }
+  }).catch(e => {
+    closeForm()
+    utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e)
+  })
+}
+
+/**
+ * Take the time difference, send request to add/subtract the time diff for all the affected orders due to -
+ * the edited order being changed or removed from the current line and date
+ * @param {*} inputValues The user input
+ * @param {*} difference The time difference that all affected orders will need to add/subtract
+ */
+function updateAffectedOrders(inputValues, difference) {
+  let promises = []
+  _ordersBeingAffected.forEach(order => {
+    const line = influx.writeLineForTimeUpdate(order, difference, 'subtract')
+    const prom = utils.post(influx.writeUrl, line)
+    promises.push(prom)
+  })
+  Promise.all(promises).then(res => {
+    closeForm()
+    utils.alert('success', 'Successful', 'Order has been successfully updated')
+    tableCtrl.refreshDashboard()
+  }).catch(e => {
+    closeForm()
+    utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e)
+  })
+}
+
+/**
+ * Take inputValues and find the qty and rate to calc the duration
+ * then return duration + changeover duration
+ * @param {*} inputValues User input for the form
+ */
+function getDiff(inputValues){
+  let diff
+  const duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours')
+  const changeover = moment.duration(inputValues.changeover, 'H:mm:ss')
+  diff = duration.add(changeover)
+  return diff
+}
+
+function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData){
+    
+  //all orders in the targeting line (except the editing order itself (if line not changed))
+  let affectedOrders = allData.filter(order => order.production_line === inputValues.productionLine && order.order_date === inputValues.date)
+  affectedOrders = affectedOrders.filter(order => order.order_id !== rowData.order_id)
+
+  //find the line's default start time and then plus next day
+  const targetDayStartTime = moment(moment(inputValues.date, 'YYYY-MM-DD').format('YYYY-MM-DD') + ' ' + utils.getLineStartTime(rowData.production_line), 'YYYY-MM-DD H:mm:ss')
+  const targetDayStartTimeText = targetDayStartTime.format('YYYY-MM-DD H:mm:ss')
+  const nextDayStartTime = moment(targetDayStartTimeText, 'YYYY-MM-DD H:mm:ss').add(1, 'days')
+
+  //calc edited order's duration
+  const duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours')
+  const changeover = moment.duration(inputValues.changeover, 'H:mm:ss')
+  const totalDur = duration.add(changeover)
+
+  //if no affected orders, see if target dat start time + totaldur <= nextdatstarttime
+  if (affectedOrders.length === 0) {
+    return targetDayStartTime.add(totalDur).isSameOrBefore(nextDayStartTime) 
+  }
+
+  //get the max end time
+  const all_end_times = affectedOrders.map(order => order.scheduled_end_datetime)
+  const maxEndTime = moment(Math.max(...all_end_times)) 
+  maxEndTime.add(totalDur)
+
+  return maxEndTime.isSameOrBefore(nextDayStartTime)
+}
+
+/**
+ * get alldata and the user input to filter all affected orders.
+ * These orders will be the ones that are in the original line with the same date.
+ * @param {*} allData All the orders that is being passed in and displayed in this panel
+ * @param {*} inputValues Inputs that the user entered in this order edition form
+ */
+function getOrdersBeingAffect(allData, inputValues){
+  const ordersInOriginalLineAndDate = allData.filter(order => order.production_line === _rowData.production_line && order.order_date === _rowData.order_date)
+  console.log(ordersInOriginalLineAndDate);
+  
+  return ordersInOriginalLineAndDate.filter(order => {
+    let endTime = moment(inputValues.scheduled_end_datetime)
+    console.log('hh');
+    console.log(moment(order.scheduled_start_datetime).format('YYYY-MM-DD H:mm:ss'));
+    console.log(endTime.format('YYYY-MM-DD H:mm:ss'));
+    return order.scheduled_start_datetime >= endTime.valueOf()
+  })
 }
 
 /**
@@ -284,17 +428,26 @@ function updateWithTagsUnchanged(url, input){
  */
 function hasTagsChanged(inputs) {
   
-  if (!rowData) {
+  if (!_rowData) {
     //if there is no rowData, meaning that the user is creating a new order, so return false
     return false
   }
   const product_id = inputs.product.split(' | ')[0]
   const product_desc = inputs.product.split(' | ')[1]
   return (
-    inputs.orderId !== rowData.order_id 
-    || product_id !== rowData.product_id 
-    || product_desc !== rowData.product_desc
+    inputs.orderId !== _rowData.order_id 
+    || product_id !== _rowData.product_id 
+    || product_desc !== _rowData.product_desc
   )
+}
+
+/**
+ * Compares the user input and the original order to see if the line has been changed.
+ * return true if it is.
+ * @param {*} inputValues The user input
+ */
+function isLineChanged(inputValues){
+  return inputValues.productionLine !== _rowData.production_line
 }
 
 /**
@@ -359,80 +512,6 @@ function isValueValid(data) {
   }
 
   return true
-}
-
-/**
- * Expect the validated user inputs
- * Write line to update the record with the user inputs passed in
- * @param {*} data 
- */
-function writeInfluxLine (data) {
-  const product_id = data.product.split(' | ')[0]
-  let product_desc = data.product.split(' | ')[1]
-  
-  //For influxdb tag keys, must add a forward slash \ before each space 
-  product_desc = product_desc.split(' ').join('\\ ')
-
-  let line = 'OrderPerformance,order_id=' + data.orderId + ',product_id=' + product_id + ',product_desc=' + product_desc + ' '
-
-  //+ ',production_line=' + data.productionLine
-
-  if (rowData) {
-    if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-      line += 'compl_qty=' + rowData.completion_qty + ','
-    }
-    if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
-      line += 'machine_state="' + rowData.machine_state + '"' + ','
-    }
-    if (rowData.scrap_qty !== null && rowData.scrap_qty !== undefined) {
-      line += 'scrap_qty=' + rowData.scrap_qty + ','
-    }
-  }
-
-  line += 'order_state="' + 'Planned' + '"' + ','
-  line += 'order_date="' + data.date + '"' + ','
-  line += 'production_line="' + data.productionLine + '"' + ','
-  line += 'planned_changeover_time="' + data.changeover + '"' + ','
-  line += 'order_qty=' + data.orderQty + ','
-  line += 'setpoint_rate=' + 0 + ','
-  line += 'planned_rate=' + data.plannedRate
-
-  // console.log(line);
-  return line
-}
-
-/**
- * Write line to changed the record's status to 'Replaced'
- */
-function writeOldInfluxLine(){
-    //For influxdb tag keys, must add a forward slash \ before each space 
-    let product_desc = rowData.product_desc.split(' ').join('\\ ')
-  
-    let line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' '
-  
-    if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-      line += 'completion_qty=' + rowData.completion_qty + ','
-    }
-    if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
-      line += 'machine_state="' + rowData.machine_state + '"' + ','
-    }
-    if (rowData.scrap_qty !== null && rowData.scrap_qty !== undefined) {
-      line += 'scrap_qty=' + rowData.scrap_qty + ','
-    }
-    if (rowData.setpoint_rate !== null && rowData.setpoint_rate !== undefined) {
-      line += 'setpoint_rate=' + rowData.setpoint_rate + ','
-    }
-
-  
-    line += 'order_state="' + 'Replaced' + '"' + ','
-    line += 'order_date="' + rowData.order_date + '"' + ','
-    line += 'production_line="' + rowData.production_line + '"' + ','
-    line += 'planned_changeover_time="' + rowData.planned_changeover_time + '"' + ','
-    line += 'order_qty=' + rowData.order_qty + ','
-    line += 'planned_rate=' + rowData.planned_rate
-  
-    // console.log(line);
-    return line
 }
 
 export { showOrderEditingForm }

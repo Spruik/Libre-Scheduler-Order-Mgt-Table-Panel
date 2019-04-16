@@ -8,6 +8,8 @@ import {TableRenderer} from './renderer';
 import {showOrderEditingForm} from './order_form_ctrl';
 import {showActionOptionsForm} from './action_options_form_ctrl'
 
+import * as utils from './utils'
+
 import './css/style.css!';
 import './css/instant-serach.css!';
 
@@ -42,13 +44,16 @@ const panelDefaults = {
   sort: { col: 0, desc: true },
 };
 
+let _reconstructed_data
+let _ctrl
+
 export class TableCtrl extends MetricsPanelCtrl {
 
   constructor($scope, $injector, templateSrv, annotationsSrv, $sanitize, variableSrv) {
     super($scope, $injector);
 
     this.pageIndex = 0;
-
+    
     if (this.panel.styles === void 0) {
       this.panel.styles = this.panel.columns;
       this.panel.columns = this.panel.fields;
@@ -63,7 +68,7 @@ export class TableCtrl extends MetricsPanelCtrl {
     this.events.on('data-snapshot-load', this.onDataReceived.bind(this));
     this.events.on('init-edit-mode', this.onInitEditMode.bind(this));
     this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
-
+    
     //Remove listener before add it
     $(document).off('click', 'tr.tr-affect#order-mgt-scheduler-table-tr')
     $(document).off('click', 'i.add-order-btn')
@@ -86,7 +91,7 @@ export class TableCtrl extends MetricsPanelCtrl {
 
     //Show form with no data when the add btn is clicked
     $(document).on('click', 'i.add-order-btn', function () {
-      showOrderEditingForm('')
+      showOrderEditingForm('', allData())
     })
   }
 
@@ -124,9 +129,11 @@ export class TableCtrl extends MetricsPanelCtrl {
   }
 
   onDataReceived(dataList) {
-
+    
     dataList = this.reorderData(dataList)
     dataList = this.filter(dataList)
+    
+    _reconstructed_data = utils.reconstruct(dataList)
 
     this.dataRaw = dataList;
     this.pageIndex = 0;
@@ -245,6 +252,7 @@ export class TableCtrl extends MetricsPanelCtrl {
     let data;
     const panel = ctrl.panel;
     let pageCount = 0;
+    _ctrl = ctrl
 
     function getTableHeight() {
       let panelHeight = ctrl.height;
@@ -343,6 +351,14 @@ export class TableCtrl extends MetricsPanelCtrl {
     });
   }
 
+}
+
+export function allData(){
+  return _reconstructed_data
+}
+
+export function refreshDashboard(){
+  _ctrl.timeSrv.refreshDashboard()
 }
 
 TableCtrl.templateUrl = './partials/module.html';

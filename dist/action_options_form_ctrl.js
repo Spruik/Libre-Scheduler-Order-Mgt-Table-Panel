@@ -1,10 +1,9 @@
 'use strict';
 
-System.register(['./order_form_ctrl', 'app/core/core', './utils'], function (_export, _context) {
+System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl', './influxHelper', 'moment'], function (_export, _context) {
   "use strict";
 
-  var showOrderEditingForm, appEvents, utils, rowData, closeForm;
-
+  var showOrderEditingForm, appEvents, utils, tableCtrl, influx, moment, _rowData, _allData, closeForm;
 
   /**
    * Expect four params which are the tags values and are for querying the record data
@@ -18,80 +17,37 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils'], function (_ex
   function showActionOptionsForm(productionLine, orderId, productDesc, productId) {
     //get data
     var tags = { prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId };
-    getRowData(callback, tags);
+    _allData = tableCtrl.allData();
+    _rowData = getRowData(_allData, tags);
 
-    function callback() {
-      if (rowData.order_state.toLowerCase() !== 'planned' && rowData.order_state.toLowerCase() !== 'ready') {
-        utils.alert('warning', 'Warning', 'This order is ' + rowData.order_state + ' and is no longer available for editing');
-        return;
-      }
+    console.log(_rowData);
+    console.log(_allData);
 
-      appEvents.emit('show-modal', {
-        src: 'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/action_options.html',
-        modalClass: 'confirm-modal',
-        model: {}
-      });
-
-      removeListeners();
-      addListeners();
+    if (_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready') {
+      utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing');
+      return;
     }
-  }
 
-  /**
-   * Get the record data with the tag values passed in
-   * Call the callback function once it is finished
-   * Stop and prompt error when it fails
-   * @param {*} callback 
-   * @param {*} tags 
-   */
-  function getRowData(callback, tags) {
-    var url = getInfluxLine(tags);
-    console.log(url);
-    console.log(tags);
-    utils.get(url).then(function (res) {
-      rowData = formatData(res);
-      // console.log(rowData)
-      callback();
-    }).catch(function (e) {
-      utils.alert('error', 'Error', 'An error occurred while getting data from the database, please try agian');
-      console.log(e);
+    appEvents.emit('show-modal', {
+      src: 'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/action_options.html',
+      modalClass: 'confirm-modal',
+      model: {}
     });
+
+    removeListeners();
+    addListeners();
   }
 
   /**
-   * Write line for the influxdb query
-   * @param {*} tags 
+   * Use the tags to filter out the clicked order data from all data
+   * And return it
+   * @param {*} allData All orders
+   * @param {*} tags The tags of the order that is clicked
    */
-  function getInfluxLine(tags) {
-    var desc = tags.prodDesc.split('\'').join('\\\'');
-    var url = utils.influxHost + 'query?pretty=true&db=smart_factory&q=select * from OrderPerformance' + ' where ';
-    url += 'production_line=' + '\'' + tags.prodLine + '\'' + ' and ';
-    url += 'order_id=' + '\'' + tags.orderId + '\'' + ' and ';
-    url += 'product_desc=' + '\'' + desc + '\'' + ' and ';
-    url += 'product_id=' + '\'' + tags.prodId + '\'';
-
-    // console.log(url)
-
-    return url;
-  }
-
-  /**
-   * The params may contain more than one row record
-   * This is to fomrat the http response into a better structure
-   * And also filter out the latest record
-   * @param {*} res 
-   */
-  function formatData(res) {
-    var cols = res.results[0].series[0].columns;
-    var rows = res.results[0].series[0].values;
-    var row = rows[rows.length - 1];
-
-    var data = {};
-    for (var i = 0; i < cols.length; i++) {
-      var col = cols[i];
-      data[col] = row[i];
-    }
-    return data;
+  function getRowData(allData, tags) {
+    return allData.filter(function (order) {
+      return order.production_line === tags.prodLine && order.order_id === tags.orderId && order.product_id === tags.prodId;
+    })[0];
   }
 
   /**
@@ -104,9 +60,9 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils'], function (_ex
     $(document).on('click', 'input[type="radio"][name="order-mgt-scheduler-actions-radio"]', function (e) {
 
       if (e.target.id === 'edit') {
-        showOrderEditingForm(rowData);
+        showOrderEditingForm(_rowData, _allData);
       } else if (e.target.id === 'release') {
-        if (rowData.order_state === 'Ready') {
+        if (_rowData.status === 'Ready') {
           utils.alert('warning', 'Warning', 'Order has already been released');
           closeForm();
         } else {
@@ -134,14 +90,51 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils'], function (_ex
    */
   function updateOrder(action) {
     var line = writeInfluxLine(action);
-    var url = utils.influxHost + 'write?db=smart_factory';
-    utils.post(url, line).then(function (res) {
-      utils.alert('success', 'Success', 'Order has been marked as ' + action);
+    if (action === 'Deleted') {
+      deleteCurrentAndUpdateAffectOrders(line);
+    } else {
+      utils.post(influx.writeUrl, line).then(function (res) {
+        utils.alert('success', 'Success', 'Order has been marked as ' + action);
+        closeForm();
+      }).catch(function (e) {
+        utils.alert('error', 'Database Error', 'An error occurred while writing data to the influxdb, please check the basebase connection');
+        closeForm();
+        console.log(e);
+      });
+    }
+  }
+
+  function deleteCurrentAndUpdateAffectOrders(line) {
+    //create promises array and put the 'delete current order request' into it first
+    var promises = [utils.post(influx.writeUrl, line)];
+
+    //get all orders data for further filtering
+    var allData = tableCtrl.allData();
+
+    //filter affected orders using all orders data
+    //affected orders = order.startTime >= thisOrder.endtime && in the same line && with the same date.
+    var affectedOrders = allData.filter(function (order) {
+      return order.scheduled_start_datetime >= _rowData.scheduled_end_datetime && order.production_line === _rowData.production_line && order.order_date === _rowData.order_date;
+    });
+
+    //work out thisOrder's total duration, which = its duration + its changeover duration
+    var deletingOrderDurationHour = moment.duration(_rowData.order_qty / _rowData.planned_rate, 'hours');
+    var deletingOrderChangeover = moment.duration(_rowData.planned_changeover_time, 'H:mm:ss');
+    var deletingOrderTotalDur = deletingOrderDurationHour.add(deletingOrderChangeover);
+
+    //loop affected orders, order's starttime and endtime should both subtract the total duration worked out
+    affectedOrders.forEach(function (order) {
+      var line = influx.writeLineForTimeUpdate(order, deletingOrderTotalDur, 'subtract');
+      promises.push(utils.post(influx.writeUrl, line));
+    });
+
+    Promise.all(promises).then(function () {
+      utils.alert('success', 'Success', 'Order has been marked as Deleted');
       closeForm();
+      tableCtrl.refreshDashboard();
     }).catch(function (e) {
-      utils.alert('error', 'Database Error', 'An error occurred while fetching data from the postgresql, please check the basebase connection');
+      utils.alert('error', 'Database Error', 'An error occurred while deleting the order : ' + e);
       closeForm();
-      console.log(e);
     });
   }
 
@@ -152,28 +145,34 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils'], function (_ex
    */
   function writeInfluxLine(status) {
     //For influxdb tag keys, must add a forward slash \ before each space 
-    var product_desc = rowData.product_desc.split(' ').join('\\ ');
+    var product_desc = _rowData.product_desc.split(' ').join('\\ ');
 
-    var line = 'OrderPerformance,order_id=' + rowData.order_id + ',product_id=' + rowData.product_id + ',product_desc=' + product_desc + ' ';
+    var line = 'OrderPerformance,order_id=' + _rowData.order_id + ',product_id=' + _rowData.product_id + ',product_desc=' + product_desc + ' ';
 
-    if (rowData.completion_qty !== null && rowData.completion_qty !== undefined) {
-      line += 'completion_qty=' + rowData.completion_qty + ',';
+    if (_rowData.compl_qty !== null && _rowData.compl_qty !== undefined) {
+      line += 'compl_qty=' + _rowData.compl_qty + ',';
     }
-    if (rowData.machine_state !== null && rowData.machine_state !== undefined) {
-      line += 'machine_state="' + rowData.machine_state + '"' + ',';
+    if (_rowData.machine_state !== null && _rowData.machine_state !== undefined) {
+      line += 'machine_state="' + _rowData.machine_state + '"' + ',';
     }
-    if (rowData.scrap_qty !== null && rowData.scrap_qty !== undefined) {
-      line += 'scrap_qty=' + rowData.scrap_qty + ',';
+    if (_rowData.scrap_qty !== null && _rowData.scrap_qty !== undefined) {
+      line += 'scrap_qty=' + _rowData.scrap_qty + ',';
     }
-    if (rowData.setpoint_rate !== null && rowData.setpoint_rate !== undefined) {
-      line += 'setpoint_rate=' + rowData.setpoint_rate + ',';
+    if (_rowData.setpoint_rate !== null && _rowData.setpoint_rate !== undefined) {
+      line += 'setpoint_rate=' + _rowData.setpoint_rate + ',';
+    }
+
+    if (_rowData.scheduled_end_datetime !== null && _rowData.scheduled_end_datetime !== undefined) {
+      line += 'scheduled_end_datetime=' + _rowData.scheduled_end_datetime + ',';
+      line += 'scheduled_start_datetime=' + _rowData.scheduled_start_datetime + ',';
     }
 
     line += 'order_state="' + status + '"' + ',';
-    line += 'order_date="' + rowData.order_date + '"' + ',';
-    line += 'production_line="' + rowData.production_line + '"' + ',';
-    line += 'order_qty=' + rowData.order_qty + ',';
-    line += 'planned_rate=' + rowData.planned_rate;
+    line += 'order_date="' + _rowData.order_date + '"' + ',';
+    line += 'planned_changeover_time="' + _rowData.planned_changeover_time + '"' + ',';
+    line += 'production_line="' + _rowData.production_line + '"' + ',';
+    line += 'order_qty=' + _rowData.order_qty + ',';
+    line += 'planned_rate=' + _rowData.planned_rate;
 
     //   console.log(line);
     return line;
@@ -186,9 +185,16 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils'], function (_ex
       appEvents = _appCoreCore.appEvents;
     }, function (_utils) {
       utils = _utils;
+    }, function (_table_ctrl) {
+      tableCtrl = _table_ctrl;
+    }, function (_influxHelper) {
+      influx = _influxHelper;
+    }, function (_moment) {
+      moment = _moment.default;
     }],
     execute: function () {
-      rowData = void 0;
+      _rowData = void 0;
+      _allData = void 0;
 
       closeForm = function closeForm() {
         $('a#order-mgt-scheduler-action-option-close-btn').trigger('click');

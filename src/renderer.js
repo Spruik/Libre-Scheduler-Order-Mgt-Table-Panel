@@ -316,13 +316,15 @@ export class TableRenderer {
       }else if (lowerCaseRow.indexOf('next') > -1) {
         this.colorState.row = '#FFFB85'
       }else if (lowerCaseRow.indexOf('running') > -1) {
-        this.colorState.row = '#A0FA78'
+        this.colorState.row = '#91F449'
       }else if (lowerCaseRow.indexOf('paused') > -1) {
         this.colorState.row = '#E8B20C'
       }else if (lowerCaseRow.indexOf('complete') > -1) {
         this.colorState.row = '#70C6FF'
       }else if (lowerCaseRow.indexOf('closed') > -1) {
         this.colorState.row = '#FF7773'
+      }else if (lowerCaseRow.indexOf('ready') > -1) {
+        this.colorState.row = '#CCFFAF'
       }
       
       for (let i = 0; i < this.table.columns.length; i++) {

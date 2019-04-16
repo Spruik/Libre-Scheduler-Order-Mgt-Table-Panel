@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
+System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
   "use strict";
 
-  var _, $, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, _createClass, _get, panelDefaults, TableCtrl;
+  var _, $, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -35,6 +35,18 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
     if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
   }
 
+  function allData() {
+    return _reconstructed_data;
+  }
+
+  _export('allData', allData);
+
+  function refreshDashboard() {
+    _ctrl.timeSrv.refreshDashboard();
+  }
+
+  _export('refreshDashboard', refreshDashboard);
+
   return {
     setters: [function (_lodash) {
       _ = _lodash.default;
@@ -54,6 +66,8 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
       showOrderEditingForm = _order_form_ctrl.showOrderEditingForm;
     }, function (_action_options_form_ctrl) {
       showActionOptionsForm = _action_options_form_ctrl.showActionOptionsForm;
+    }, function (_utils) {
+      utils = _utils;
     }, function (_cssStyleCss) {}, function (_cssInstantSerachCss) {}],
     execute: function () {
       _createClass = function () {
@@ -126,6 +140,8 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
         fontSize: '100%',
         sort: { col: 0, desc: true }
       };
+      _reconstructed_data = void 0;
+      _ctrl = void 0;
 
       _export('TableCtrl', TableCtrl = function (_MetricsPanelCtrl) {
         _inherits(TableCtrl, _MetricsPanelCtrl);
@@ -174,7 +190,7 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
 
           //Show form with no data when the add btn is clicked
           $(document).on('click', 'i.add-order-btn', function () {
-            showOrderEditingForm('');
+            showOrderEditingForm('', allData());
           });
           return _this;
         }
@@ -220,6 +236,8 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
 
             dataList = this.reorderData(dataList);
             dataList = this.filter(dataList);
+
+            _reconstructed_data = utils.reconstruct(dataList);
 
             this.dataRaw = dataList;
             this.pageIndex = 0;
@@ -339,6 +357,7 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
             var data = void 0;
             var panel = ctrl.panel;
             var pageCount = 0;
+            _ctrl = ctrl;
 
             function getTableHeight() {
               var panelHeight = ctrl.height;

@@ -51,10 +51,39 @@ export let get = url => {
   })
 }
 
+/**
+ * pass in the line, return the line's default start time
+ * @param {*} line 
+ */
+export function getLineStartTime(line){
+  return '6:00:00'
+}
+
 export const alert = (type, title, msg) => {
   appEvents.emit('alert-' + type, [title, msg])
 }
 
 export const distinctElems = list => {
   return Array.from(new Set(list))
+}
+
+export const reconstruct = data => {
+
+  if (data.length === 0) {
+    return data
+  }
+
+  const cols = data[0].columns
+  const rows = data[0].rows
+
+  let result = []
+  rows.forEach((row) => {
+    let obj = {}
+    cols.forEach((col, k) => {
+      obj[col.text] = row[k]
+    })
+    result.push(obj)
+  });
+  
+  return result
 }
