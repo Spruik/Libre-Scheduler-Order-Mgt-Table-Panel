@@ -105,6 +105,7 @@ function updateOrder(action) {
     utils.post(influx.writeUrl, line).then(res => {
       utils.alert('success', 'Success', 'Order has been marked as ' + action)
       closeForm()
+      tableCtrl.refreshDashboard()
     }).catch(e => {
       utils.alert('error', 'Database Error', 'An error occurred while writing data to the influxdb, please check the basebase connection')
       closeForm()
