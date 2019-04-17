@@ -18,6 +18,8 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
     //get data
     var tags = { prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId };
     _allData = tableCtrl.allData();
+    console.log('before getrowdata, alldata');
+    console.log(_allData);
     getRowData(_allData, tags).then(function (res) {
       init(res);
     }).catch(function (e) {
@@ -27,7 +29,8 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
 
   function init(res) {
     _rowData = res;
-
+    console.log('after getrowdata, data');
+    console.log(_rowData);
     if (_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready') {
       utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing');
       return;

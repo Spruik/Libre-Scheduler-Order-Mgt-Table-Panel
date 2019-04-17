@@ -25,12 +25,15 @@ function showActionOptionsForm(productionLine, orderId, productDesc, productId){
   //get data
   let tags = {prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId}
   _allData = tableCtrl.allData()
+  console.log('before getrowdata, alldata');
+  console.log(_allData);
   getRowData(_allData, tags).then(res => {init(res)}).catch(e => {utils.alert('error', 'Error', e)})
 }
 
 function init(res){
   _rowData = res
-
+  console.log('after getrowdata, data');
+  console.log(_rowData);
   if(_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready'){
     utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing')
     return
