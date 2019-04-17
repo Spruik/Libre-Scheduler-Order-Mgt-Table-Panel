@@ -5,7 +5,6 @@ import * as tableCtrl from './table_ctrl'
 import * as influx from './influxHelper'
 import moment from 'moment'
 
-
 let _rowData
 let _allData
 
@@ -26,8 +25,12 @@ function showActionOptionsForm(productionLine, orderId, productDesc, productId){
   //get data
   let tags = {prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId}
   _allData = tableCtrl.allData()
-  _rowData = getRowData(_allData, tags)
-  
+  getRowData(_allData, tags).then(res => {init(res)}).catch(e => {utils.alert('error', 'Error', e)})
+}
+
+function init(res){
+  _rowData = res
+
   if(_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready'){
     utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing')
     return
@@ -50,9 +53,16 @@ function showActionOptionsForm(productionLine, orderId, productDesc, productId){
  * @param {*} tags The tags of the order that is clicked
  */
 function getRowData(allData, tags){
-  return allData.filter(order => order.production_line === tags.prodLine 
-    && order.order_id === tags.orderId 
-    && order.product_id === tags.prodId)[0]
+  return new Promise((resolve, reject) => {
+    const data =  allData.filter(order => order.production_line === tags.prodLine 
+      && order.order_id === tags.orderId 
+      && order.product_id === tags.prodId)[0]
+      if (data.length === 0) {
+        reject('Order not found')
+      }else {
+        resolve(data)
+      }
+  })
 }
 
 /**

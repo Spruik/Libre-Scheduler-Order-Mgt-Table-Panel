@@ -18,7 +18,15 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
     //get data
     var tags = { prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId };
     _allData = tableCtrl.allData();
-    _rowData = getRowData(_allData, tags);
+    getRowData(_allData, tags).then(function (res) {
+      init(res);
+    }).catch(function (e) {
+      utils.alert('error', 'Error', e);
+    });
+  }
+
+  function init(res) {
+    _rowData = res;
 
     if (_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready') {
       utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing');
@@ -42,9 +50,16 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
    * @param {*} tags The tags of the order that is clicked
    */
   function getRowData(allData, tags) {
-    return allData.filter(function (order) {
-      return order.production_line === tags.prodLine && order.order_id === tags.orderId && order.product_id === tags.prodId;
-    })[0];
+    return new Promise(function (resolve, reject) {
+      var data = allData.filter(function (order) {
+        return order.production_line === tags.prodLine && order.order_id === tags.orderId && order.product_id === tags.prodId;
+      })[0];
+      if (data.length === 0) {
+        reject('Order not found');
+      } else {
+        resolve(data);
+      }
+    });
   }
 
   /**
