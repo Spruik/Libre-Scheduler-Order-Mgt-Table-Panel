@@ -248,24 +248,24 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
       return;
     }
 
-    if (hasTagsChanged(inputValues)) {
-      updateOldAndNewOrders(inputValues);
-    } else {
-      //in here, check if the line has changed, if yes, meaning that the order is going to another line
-      //so also update all affectingOrders(orders that are in the original line and that are after this order)
-      if (isLineChanged(inputValues)) {
-        //save the order directly with removing its starttime and endtime to let the initialiser to init it again
-        //coz it is changing line, so just simply remove the start time and end time
-        updateWithRemoving(inputValues);
-      } else {
-        //save the order directly with changing its starttime and endtime
-        if (isDateChanged(inputValues)) {
-          updateWithRemoving(inputValues);
-        } else {
-          updateWithChanging(inputValues);
-        }
-      }
-    }
+    // if (hasTagsChanged(inputValues)) {
+    updateOldAndNewOrders(inputValues);
+    // }else {
+    //   //in here, check if the line has changed, if yes, meaning that the order is going to another line
+    //   //so also update all affectingOrders(orders that are in the original line and that are after this order)
+    //   if (isLineChanged(inputValues)) {
+    //     //save the order directly with removing its starttime and endtime to let the initialiser to init it again
+    //     //coz it is changing line, so just simply remove the start time and end time
+    //     updateWithRemoving(inputValues)
+    //   }else{
+    //     //save the order directly with changing its starttime and endtime
+    //     if (isDateChanged(inputValues)) {
+    //       updateWithRemoving(inputValues)
+    //     }else{
+    //       updateWithChanging(inputValues)
+    //     }
+    //   }
+    // }
   }
 
   function updateOldAndNewOrders(inputValues) {
