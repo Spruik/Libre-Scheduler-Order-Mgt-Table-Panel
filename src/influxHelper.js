@@ -12,6 +12,8 @@ let hasTurnedAround = false
  */
 export function writeLineForUpdate (status, data) {
   // For influxdb tag keys, must add a forward slash \ before each space
+  console.log(data);
+  
   let product_desc = data.product_desc.split(' ').join('\\ ')
 
   let line = writeTags(data.order_id, data.product_id, product_desc)

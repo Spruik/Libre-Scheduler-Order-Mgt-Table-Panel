@@ -255,11 +255,26 @@ function updateOrder(inputValues){
 }
 
 function updateOldAndNewOrders(inputValues){
-  const line = influx.writeLineForUpdate('Replaced', _rowData)
-  
-  utils.post(influx.writeUrl, line).then(res => {
-    //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
-    //becuase this is the first
+  if (_rowData) {
+    const line = influx.writeLineForUpdate('Replaced', _rowData)
+    utils.post(influx.writeUrl, line).then(res => {
+      //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
+      //becuase this is the first
+      if (isLineChanged(inputValues)) {
+        updateWithRemoving(inputValues)
+      }else {
+        if (isDateChanged(inputValues)) {
+          updateWithRemoving(inputValues)
+        }else{
+          updateWithChanging(inputValues)
+        }
+      }
+    }).catch(e => {
+      closeForm()
+      utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e)
+    })
+  }else{
+    //if there is no _rowdata, meaning that it is being created, so no need to update
     if (isLineChanged(inputValues)) {
       updateWithRemoving(inputValues)
     }else {
@@ -269,10 +284,7 @@ function updateOldAndNewOrders(inputValues){
         updateWithChanging(inputValues)
       }
     }
-  }).catch(e => {
-    closeForm()
-    utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e)
-  })
+  }
 }
 
 function isDateChanged(inputValues){

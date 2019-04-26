@@ -269,11 +269,26 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
   }
 
   function updateOldAndNewOrders(inputValues) {
-    var line = influx.writeLineForUpdate('Replaced', _rowData);
-
-    utils.post(influx.writeUrl, line).then(function (res) {
-      //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
-      //becuase this is the first
+    if (_rowData) {
+      var line = influx.writeLineForUpdate('Replaced', _rowData);
+      utils.post(influx.writeUrl, line).then(function (res) {
+        //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
+        //becuase this is the first
+        if (isLineChanged(inputValues)) {
+          updateWithRemoving(inputValues);
+        } else {
+          if (isDateChanged(inputValues)) {
+            updateWithRemoving(inputValues);
+          } else {
+            updateWithChanging(inputValues);
+          }
+        }
+      }).catch(function (e) {
+        closeForm();
+        utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
+      });
+    } else {
+      //if there is no _rowdata, meaning that it is being created, so no need to update
       if (isLineChanged(inputValues)) {
         updateWithRemoving(inputValues);
       } else {
@@ -283,10 +298,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
           updateWithChanging(inputValues);
         }
       }
-    }).catch(function (e) {
-      closeForm();
-      utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
-    });
+    }
   }
 
   function isDateChanged(inputValues) {

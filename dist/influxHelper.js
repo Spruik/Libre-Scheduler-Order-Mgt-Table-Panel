@@ -13,6 +13,8 @@ System.register(['./utils', 'moment'], function (_export, _context) {
    */
   function writeLineForUpdate(status, data) {
     // For influxdb tag keys, must add a forward slash \ before each space
+    console.log(data);
+
     var product_desc = data.product_desc.split(' ').join('\\ ');
 
     var line = writeTags(data.order_id, data.product_id, product_desc);
