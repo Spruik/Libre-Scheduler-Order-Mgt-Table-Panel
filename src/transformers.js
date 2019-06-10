@@ -245,7 +245,7 @@ transformers['json'] = {
 
 function transformDataToTable(data, panel) {
   const model = new TableModel();
-
+    
   if (!data || data.length === 0) {
     return model;
   }

@@ -3,7 +3,7 @@
 System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
   "use strict";
 
-  var _, $, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
+  var _, $, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, _slicedToArray, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -70,6 +70,44 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
       utils = _utils;
     }, function (_cssStyleCss) {}, function (_cssInstantSerachCss) {}],
     execute: function () {
+      _slicedToArray = function () {
+        function sliceIterator(arr, i) {
+          var _arr = [];
+          var _n = true;
+          var _d = false;
+          var _e = undefined;
+
+          try {
+            for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+              _arr.push(_s.value);
+
+              if (i && _arr.length === i) break;
+            }
+          } catch (err) {
+            _d = true;
+            _e = err;
+          } finally {
+            try {
+              if (!_n && _i["return"]) _i["return"]();
+            } finally {
+              if (_d) throw _e;
+            }
+          }
+
+          return _arr;
+        }
+
+        return function (arr, i) {
+          if (Array.isArray(arr)) {
+            return arr;
+          } else if (Symbol.iterator in Object(arr)) {
+            return sliceIterator(arr, i);
+          } else {
+            throw new TypeError("Invalid attempt to destructure non-iterable instance");
+          }
+        };
+      }();
+
       _createClass = function () {
         function defineProperties(target, props) {
           for (var i = 0; i < props.length; i++) {
@@ -234,13 +272,15 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
           key: 'onDataReceived',
           value: function onDataReceived(dataList) {
 
-            dataList = this.reorderData(dataList);
-            dataList = this.filter(dataList);
+            dataList = this.reorderData(dataList); // put production line in the first column
+            dataList = this.filter(dataList); // filter out those with status of 'replaced' or 'deleted'
+            dataList = this.sort(dataList, "scheduled_start_datetime"); // sort rows so that all rows are sort/order by scheduled_start_time
 
             _reconstructed_data = utils.reconstruct(dataList);
 
             this.dataRaw = dataList;
             this.pageIndex = 0;
+
             // automatically correct transform mode based on data
             if (this.dataRaw && this.dataRaw.length) {
               if (this.dataRaw[0].type === 'table') {
@@ -305,14 +345,64 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
               }
             });
             dataList[0].rows = rows;
+            return dataList;
+          }
+        }, {
+          key: 'sort',
+          value: function sort(dataList, key) {
+            if (dataList.length === 0) {
+              return dataList;
+            }
+
+            var cols = dataList[0].columns;
+            var index = this.find(key, cols);
+            dataList[0].rows.sort(function (a, b) {
+              return a[index] - b[index];
+            });
 
             return dataList;
+          }
+        }, {
+          key: 'find',
+          value: function find(key, cols) {
+            var index = 0;
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+              for (var _iterator = cols.entries()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                var _step$value = _slicedToArray(_step.value, 2),
+                    i = _step$value[0],
+                    col = _step$value[1];
+
+                if (col.text === key) {
+                  index = i;
+                  break;
+                }
+              }
+            } catch (err) {
+              _didIteratorError = true;
+              _iteratorError = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion && _iterator.return) {
+                  _iterator.return();
+                }
+              } finally {
+                if (_didIteratorError) {
+                  throw _iteratorError;
+                }
+              }
+            }
+
+            return index;
           }
         }, {
           key: 'render',
           value: function render() {
             this.table = transformDataToTable(this.dataRaw, this.panel);
-            this.table.sort(this.panel.sort);
+            // this.table.sort(this.panel.sort);
             this.renderer = new TableRenderer(this.panel, this.table, this.dashboard.isTimezoneUtc(), this.$sanitize, this.templateSrv, this.col);
 
             return _get(TableCtrl.prototype.__proto__ || Object.getPrototypeOf(TableCtrl.prototype), 'render', this).call(this, this.table);

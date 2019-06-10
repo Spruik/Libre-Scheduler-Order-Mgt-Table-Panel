@@ -130,13 +130,15 @@ export class TableCtrl extends MetricsPanelCtrl {
 
   onDataReceived(dataList) {
     
-    dataList = this.reorderData(dataList)
-    dataList = this.filter(dataList)
+    dataList = this.reorderData(dataList) // put production line in the first column
+    dataList = this.filter(dataList) // filter out those with status of 'replaced' or 'deleted'
+    dataList = this.sort(dataList, "scheduled_start_datetime") // sort rows so that all rows are sort/order by scheduled_start_time
     
     _reconstructed_data = utils.reconstruct(dataList)
 
     this.dataRaw = dataList;
     this.pageIndex = 0;
+
     // automatically correct transform mode based on data
     if (this.dataRaw && this.dataRaw.length) {
       if (this.dataRaw[0].type === 'table') {
@@ -197,13 +199,35 @@ export class TableCtrl extends MetricsPanelCtrl {
         }
     })
     dataList[0].rows = rows
-
     return dataList
+  }
+
+  //sort by schedule start time
+  sort(dataList, key){
+    if (dataList.length === 0) { return dataList }
+    
+    const cols = dataList[0].columns
+    const index = this.find(key, cols)
+    dataList[0].rows.sort((a,b) => a[index] - b[index])
+    
+    return dataList
+  }
+
+  //find index related to the key in the columns
+  find(key, cols){
+    let index = 0    
+    for (const [i, col] of cols.entries()){
+      if (col.text === key) {
+        index = i
+        break
+      }
+    }
+    return index
   }
 
   render() {
     this.table = transformDataToTable(this.dataRaw, this.panel);
-    this.table.sort(this.panel.sort);
+    // this.table.sort(this.panel.sort);
     this.renderer = new TableRenderer(
       this.panel,
       this.table,
