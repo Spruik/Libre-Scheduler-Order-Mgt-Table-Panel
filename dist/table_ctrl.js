@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
+System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
   "use strict";
 
-  var _, $, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, _slicedToArray, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
+  var _, $, moment, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, _slicedToArray, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -52,6 +52,8 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
       _ = _lodash.default;
     }, function (_jquery) {
       $ = _jquery.default;
+    }, function (_moment) {
+      moment = _moment.default;
     }, function (_appPluginsSdk) {
       MetricsPanelCtrl = _appPluginsSdk.MetricsPanelCtrl;
     }, function (_transformers) {
@@ -272,8 +274,12 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
           key: 'onDataReceived',
           value: function onDataReceived(dataList) {
 
+            // time range
+            var from = this.templateSrv.timeRange.from;
+            var to = this.templateSrv.timeRange.to;
+
             dataList = this.reorderData(dataList); // put production line in the first column
-            dataList = this.filter(dataList); // filter out those with status of 'replaced' or 'deleted'
+            dataList = this.filter(dataList, from, to); // filter out those with status of 'replaced' or 'deleted' and those that are not in the time range
             dataList = this.sort(dataList, "scheduled_start_datetime"); // sort rows so that all rows are sort/order by scheduled_start_time
 
             _reconstructed_data = utils.reconstruct(dataList);
@@ -330,7 +336,7 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
           }
         }, {
           key: 'filter',
-          value: function filter(dataList) {
+          value: function filter(dataList, from, to) {
             if (dataList.length === 0) {
               return dataList;
             }
@@ -341,7 +347,13 @@ System.register(['lodash', 'jquery', 'app/plugins/sdk', './transformers', './edi
                 return typeof elem === 'string' ? elem.toLowerCase() : elem;
               });
               if (lowerCaseRow.indexOf('replaced') === -1 && lowerCaseRow.indexOf('deleted') === -1) {
-                return row;
+                var scheduledStartTimeTimeStamp = row[10]; // the scheduled start time is the 10th elem
+                var scheduledStartTime = moment(scheduledStartTimeTimeStamp); // moment shcedule start time
+                var changeover = moment.duration(row[9], 'H:mm:ss'); // moment changeover
+                scheduledStartTime.subtract(changeover); // start time - changeover to have the initial time
+                if (scheduledStartTime.isSameOrAfter(from) && scheduledStartTime.isSameOrBefore(to)) {
+                  return row;
+                }
               }
             });
             dataList[0].rows = rows;

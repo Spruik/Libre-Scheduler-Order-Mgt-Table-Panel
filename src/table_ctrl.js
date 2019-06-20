@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import $ from 'jquery';
+import moment from 'moment'
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
 import {transformDataToTable} from './transformers';
 import {tablePanelEditor} from './editor';
@@ -129,9 +130,13 @@ export class TableCtrl extends MetricsPanelCtrl {
   }
 
   onDataReceived(dataList) {
+
+    // time range
+    const from = this.templateSrv.timeRange.from
+    const to = this.templateSrv.timeRange.to
     
     dataList = this.reorderData(dataList) // put production line in the first column
-    dataList = this.filter(dataList) // filter out those with status of 'replaced' or 'deleted'
+    dataList = this.filter(dataList, from, to) // filter out those with status of 'replaced' or 'deleted' and those that are not in the time range
     dataList = this.sort(dataList, "scheduled_start_datetime") // sort rows so that all rows are sort/order by scheduled_start_time
     
     _reconstructed_data = utils.reconstruct(dataList)
@@ -185,8 +190,9 @@ export class TableCtrl extends MetricsPanelCtrl {
     return dataList
   }
 
-  //filter out records that are not of status of 'Replaced'
-  filter(dataList){
+  // 1. filter out records that are not of status of 'Replaced'
+  // 2. filter out records that are not in the time range
+  filter(dataList, from, to){
     if (dataList.length === 0) {
         return dataList
     }
@@ -195,7 +201,14 @@ export class TableCtrl extends MetricsPanelCtrl {
     rows = rows.filter(row => {
         const lowerCaseRow = row.map(elem => (typeof elem === 'string') ? elem.toLowerCase() : elem)
         if (lowerCaseRow.indexOf('replaced') === -1 && lowerCaseRow.indexOf('deleted') === -1) {
+          const scheduledStartTimeTimeStamp = row[10] // the scheduled start time is the 10th elem
+          const scheduledStartTime = moment(scheduledStartTimeTimeStamp) // moment shcedule start time
+          const changeover = moment.duration(row[9], 'H:mm:ss') // moment changeover
+          scheduledStartTime.subtract(changeover) // start time - changeover to have the initial time
+          if (scheduledStartTime.isSameOrAfter(from) && scheduledStartTime.isSameOrBefore(to)) {
+            // if scheduled start time >= $from && <= $to
             return row
+          }
         }
     })
     dataList[0].rows = rows
