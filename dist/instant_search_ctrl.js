@@ -19,7 +19,7 @@ System.register(['./datalist'], function (_export, _context) {
     });
 
     var productsData = products.reduce(function (arr, p) {
-      var obj = { value: p, text: p.product_id + ' | ' + p.product_desc };
+      var obj = { value: p, text: p.id + ' | ' + p.product_desc };
       arr.push(obj);
       return arr;
     }, []);

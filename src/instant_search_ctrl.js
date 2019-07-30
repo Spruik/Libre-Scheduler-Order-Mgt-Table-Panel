@@ -11,7 +11,7 @@ function enableInstantSearch (products, productionLines) {
   productionLines = productionLines.filter(data => data.production_line !== null && data.equipment === null)
 
   const productsData = products.reduce((arr, p) => {
-    const obj = {value: p, text: p.product_id + ' | ' + p.product_desc}
+    const obj = {value: p, text: p.id + ' | ' + p.product_desc}
     arr.push(obj)
     return arr
   }, [])
