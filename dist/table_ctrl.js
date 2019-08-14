@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
+System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './constants', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
   "use strict";
 
-  var _, $, moment, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, _slicedToArray, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
+  var _, $, moment, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, cons, _slicedToArray, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -70,6 +70,8 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
       showActionOptionsForm = _action_options_form_ctrl.showActionOptionsForm;
     }, function (_utils) {
       utils = _utils;
+    }, function (_constants) {
+      cons = _constants;
     }, function (_cssStyleCss) {}, function (_cssInstantSerachCss) {}],
     execute: function () {
       _slicedToArray = function () {
@@ -350,7 +352,7 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
               var lowerCaseRow = row.map(function (elem) {
                 return typeof elem === 'string' ? elem.toLowerCase() : elem;
               });
-              if (lowerCaseRow.indexOf('replaced') === -1 && lowerCaseRow.indexOf('deleted') === -1) {
+              if (lowerCaseRow.indexOf(cons.STATE_REPLACED) === -1 && lowerCaseRow.indexOf(cons.STATE_DELETED) === -1) {
                 return row;
               }
             });

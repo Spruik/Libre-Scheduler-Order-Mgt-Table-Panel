@@ -12,7 +12,6 @@ let hasTurnedAround = false
  */
 export function writeLineForUpdate (status, data) {
   // For influxdb tag keys, must add a forward slash \ before each space
-  console.log(data);
   
   let product_desc = data.product_desc.split(' ').join('\\ ')
 
@@ -44,7 +43,6 @@ export function writeLineForUpdate (status, data) {
   line += 'planned_rate=' + data.planned_rate
 
 //   console.log('writeLineForUpdate');
-//   console.log(line);
   return line
 }
 
@@ -67,7 +65,6 @@ export function writeLineForUpdateWithChangingTime (data, currentStatus, startTi
   line += 'planned_rate=' + data.plannedRate
 
 //   console.log('writeLineForUpdateWithChangingTime');
-//   console.log(line);
   return line
 }
 
@@ -130,7 +127,6 @@ export function writeLineForTimeUpdate (data, timeDiff, action) {
   line += 'planned_rate=' + data.planned_rate
 
 //   console.log('writeLineForTimeUpdate');
-//   console.log(line);
   return line
 }
 
@@ -151,7 +147,6 @@ export function writeLineForUpdateWithRemovingTime (data, currentStatus) {
   line += 'planned_rate=' + data.plannedRate
 
 //   console.log('writeLineForUpdateWithRemovingTime');
-//   console.log(line);
   return line
 }
 

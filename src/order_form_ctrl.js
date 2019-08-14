@@ -1,4 +1,5 @@
 import * as utils from './utils'
+import * as cons from './constants'
 import moment from 'moment'
 import { appEvents } from 'app/core/core'
 import { enableInstantSearch } from './instant_search_ctrl'
@@ -16,6 +17,7 @@ let _ordersBeingAffected
 let _allData
 let tryCatchCount = 1
 let _orderDurationHours
+let _orderStates
 
 /**
  * This function is the entry point to show the order editing form
@@ -105,6 +107,7 @@ function startCtrl(){
 function getProductsAndEquipments (callback) {
   let productsUrl = utils.postgRestHost + 'product'
   let equipmentsUrl = utils.postgRestHost + 'equipment?production_line=not.is.null'
+  const stateUrl = `${utils.postgRestHost}order_state`
 
   utils.get(productsUrl)
     .then(res => {
@@ -112,7 +115,12 @@ function getProductsAndEquipments (callback) {
       utils.get(equipmentsUrl)
         .then(res => {
           equipment = res
-          callback()
+          utils.get(stateUrl).then(res => {
+            _orderStates = res
+            callback()
+          }).catch(e => {
+            utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection')
+          })
         })
         .catch(e => {
           utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection')
@@ -165,7 +173,7 @@ function removeListeners(){
 function updateDuration(qty, rate){
 
   if (qty !== "" && rate !== "") {
-    let durationHrs = parseInt(qty) / parseInt(rate)
+    let durationHrs = Number(parseFloat(qty).toFixed(2)) / Number((parseFloat(rate) * 60).toFixed(2))
     let momentDuration = moment.duration(durationHrs, 'hours')
 
     let durationText = getDurationText(momentDuration)
@@ -256,7 +264,7 @@ function updateOrder(inputValues){
 
 function updateOldAndNewOrders(inputValues){
   if (_rowData) {
-    const line = influx.writeLineForUpdate('Replaced', _rowData)
+    const line = influx.writeLineForUpdate(cons.STATE_REPLACED, _rowData)
     utils.post(influx.writeUrl, line).then(res => {
       //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
       //becuase this is the first
@@ -301,7 +309,7 @@ function updateWithChanging(inputValues) {
   //The difference between the original changeover and the edited changeover
   const changeoverDiff = moment.duration(inputValues.changeover).subtract(moment.duration(_rowData.planned_changeover_time))
   const startTime = moment(originalStartTime).add(changeoverDiff)
-  const duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours')
+  const duration = moment.duration(inputValues.orderQty / (inputValues.plannedRate * 60), 'hours')
   const endTime = moment(originalStartTime).add(changeoverDiff).add(duration)
 
   //calc the difference between the edited order's total duration and the original order's total duration
@@ -319,6 +327,10 @@ function updateWithChanging(inputValues) {
   })
 }
 
+function getInitState() {
+  return _orderStates.filter(x => x.is_init_state)[0].state
+}
+
 /**
  * Take the user input, send request to change the current order to be what the user has entered in the edition form
  * It will remove the order's start time and end time because it is changing line so that no order will be affected in the changing line
@@ -326,7 +338,12 @@ function updateWithChanging(inputValues) {
  * @param {*} inputValues The user input
  */
 function updateWithRemoving(inputValues){
-  const line = influx.writeLineForUpdateWithRemovingTime(inputValues, _rowData ? _rowData.status : 'Planned')
+  const initState = getInitState()
+  if (!initState){
+    utils.alert('error', 'Error', 'Cannot find Initial State from the Order State Config Table')
+    return
+  }
+  const line = influx.writeLineForUpdateWithRemovingTime(inputValues, _rowData ? _rowData.status : initState)
   
   utils.post(influx.writeUrl, line).then(res => {
     if (_ordersBeingAffected.length > 0) {
@@ -373,7 +390,7 @@ function updateAffectedOrders(inputValues, difference) {
  */
 function getDiff(inputValues){
   let diff
-  const duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours')
+  const duration = moment.duration(inputValues.orderQty / (inputValues.plannedRate * 60), 'hours')
   const changeover = moment.duration(inputValues.changeover, 'H:mm:ss')
   diff = duration.add(changeover)
   return diff
@@ -391,7 +408,7 @@ function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData){
   const nextDayStartTime = moment(targetDayStartTimeText, 'YYYY-MM-DD H:mm:ss').add(1, 'days')
 
   //calc edited order's duration
-  const duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours')
+  const duration = moment.duration(inputValues.orderQty / (inputValues.plannedRate * 60), 'hours')
   const changeover = moment.duration(inputValues.changeover, 'H:mm:ss')
   const totalDur = duration.add(changeover)
 

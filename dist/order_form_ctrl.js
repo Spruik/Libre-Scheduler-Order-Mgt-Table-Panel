@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', './libs/bootstrap-datepicker', './libs/bootstrap-timepicker', './influxHelper', './table_ctrl'], function (_export, _context) {
+System.register(['./utils', './constants', 'moment', 'app/core/core', './instant_search_ctrl', './libs/bootstrap-datepicker', './libs/bootstrap-timepicker', './influxHelper', './table_ctrl'], function (_export, _context) {
   "use strict";
 
-  var utils, moment, appEvents, enableInstantSearch, bootstrap_datepicker, bootstrap_timepicker, influx, tableCtrl, closeForm, products, equipment, _rowData, _ordersBeingAffected, _allData, tryCatchCount, _orderDurationHours;
+  var utils, cons, moment, appEvents, enableInstantSearch, bootstrap_datepicker, bootstrap_timepicker, influx, tableCtrl, closeForm, products, equipment, _rowData, _ordersBeingAffected, _allData, tryCatchCount, _orderDurationHours, _orderStates;
 
   function _toConsumableArray(arr) {
     if (Array.isArray(arr)) {
@@ -120,12 +120,18 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
   function getProductsAndEquipments(callback) {
     var productsUrl = utils.postgRestHost + 'product';
     var equipmentsUrl = utils.postgRestHost + 'equipment?production_line=not.is.null';
+    var stateUrl = utils.postgRestHost + 'order_state';
 
     utils.get(productsUrl).then(function (res) {
       products = res;
       utils.get(equipmentsUrl).then(function (res) {
         equipment = res;
-        callback();
+        utils.get(stateUrl).then(function (res) {
+          _orderStates = res;
+          callback();
+        }).catch(function (e) {
+          utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection');
+        });
       }).catch(function (e) {
         utils.alert('error', 'Error', 'An error occurred while fetching data from the postgresql : ' + e + 'please check the basebase connection');
       });
@@ -176,7 +182,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
   function updateDuration(qty, rate) {
 
     if (qty !== "" && rate !== "") {
-      var durationHrs = parseInt(qty) / parseInt(rate);
+      var durationHrs = Number(parseFloat(qty).toFixed(2)) / Number((parseFloat(rate) * 60).toFixed(2));
       var momentDuration = moment.duration(durationHrs, 'hours');
 
       var durationText = getDurationText(momentDuration);
@@ -270,7 +276,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
 
   function updateOldAndNewOrders(inputValues) {
     if (_rowData) {
-      var line = influx.writeLineForUpdate('Replaced', _rowData);
+      var line = influx.writeLineForUpdate(cons.STATE_REPLACED, _rowData);
       utils.post(influx.writeUrl, line).then(function (res) {
         //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
         //becuase this is the first
@@ -315,7 +321,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     //The difference between the original changeover and the edited changeover
     var changeoverDiff = moment.duration(inputValues.changeover).subtract(moment.duration(_rowData.planned_changeover_time));
     var startTime = moment(originalStartTime).add(changeoverDiff);
-    var duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours');
+    var duration = moment.duration(inputValues.orderQty / (inputValues.plannedRate * 60), 'hours');
     var endTime = moment(originalStartTime).add(changeoverDiff).add(duration);
 
     //calc the difference between the edited order's total duration and the original order's total duration
@@ -333,6 +339,12 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     });
   }
 
+  function getInitState() {
+    return _orderStates.filter(function (x) {
+      return x.is_init_state;
+    })[0].state;
+  }
+
   /**
    * Take the user input, send request to change the current order to be what the user has entered in the edition form
    * It will remove the order's start time and end time because it is changing line so that no order will be affected in the changing line
@@ -340,7 +352,12 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    * @param {*} inputValues The user input
    */
   function updateWithRemoving(inputValues) {
-    var line = influx.writeLineForUpdateWithRemovingTime(inputValues, _rowData ? _rowData.status : 'Planned');
+    var initState = getInitState();
+    if (!initState) {
+      utils.alert('error', 'Error', 'Cannot find Initial State from the Order State Config Table');
+      return;
+    }
+    var line = influx.writeLineForUpdateWithRemovingTime(inputValues, _rowData ? _rowData.status : initState);
 
     utils.post(influx.writeUrl, line).then(function (res) {
       if (_ordersBeingAffected.length > 0) {
@@ -387,7 +404,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
    */
   function getDiff(inputValues) {
     var diff = void 0;
-    var duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours');
+    var duration = moment.duration(inputValues.orderQty / (inputValues.plannedRate * 60), 'hours');
     var changeover = moment.duration(inputValues.changeover, 'H:mm:ss');
     diff = duration.add(changeover);
     return diff;
@@ -409,7 +426,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
     var nextDayStartTime = moment(targetDayStartTimeText, 'YYYY-MM-DD H:mm:ss').add(1, 'days');
 
     //calc edited order's duration
-    var duration = moment.duration(inputValues.orderQty / inputValues.plannedRate, 'hours');
+    var duration = moment.duration(inputValues.orderQty / (inputValues.plannedRate * 60), 'hours');
     var changeover = moment.duration(inputValues.changeover, 'H:mm:ss');
     var totalDur = duration.add(changeover);
 
@@ -537,6 +554,8 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
   return {
     setters: [function (_utils) {
       utils = _utils;
+    }, function (_constants) {
+      cons = _constants;
     }, function (_moment) {
       moment = _moment.default;
     }, function (_appCoreCore) {
@@ -564,6 +583,7 @@ System.register(['./utils', 'moment', 'app/core/core', './instant_search_ctrl', 
       _allData = void 0;
       tryCatchCount = 1;
       _orderDurationHours = void 0;
+      _orderStates = void 0;
 
       _export('showOrderEditingForm', showOrderEditingForm);
     }

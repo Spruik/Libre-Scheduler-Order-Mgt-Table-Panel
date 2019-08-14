@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl', './influxHelper', 'moment'], function (_export, _context) {
+System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl', './influxHelper', './constants', 'moment'], function (_export, _context) {
   "use strict";
 
-  var showOrderEditingForm, appEvents, utils, tableCtrl, influx, moment, _rowData, _allData, closeForm;
+  var showOrderEditingForm, appEvents, utils, tableCtrl, influx, cons, moment, _rowData, _allData, _orderStates, closeForm;
 
   /**
    * Expect four params which are the tags values and are for querying the record data
@@ -27,7 +27,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
 
   function init(res) {
     _rowData = res;
-    if (_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready') {
+    if (_rowData.status.toLowerCase() !== cons.STATE_PLAN && _rowData.status.toLowerCase() !== cons.STATE_READY) {
       utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing');
       return;
     }
@@ -56,7 +56,13 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
       if (data.length === 0) {
         reject('Order not found');
       } else {
-        resolve(data);
+        var url = utils.postgRestHost + 'order_state';
+        utils.get(url).then(function (res) {
+          _orderStates = res;
+          resolve(data);
+        }).catch(function (e) {
+          reject('error due to order state configuration');
+        });
       }
     });
   }
@@ -73,14 +79,14 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
       if (e.target.id === 'edit') {
         showOrderEditingForm(_rowData, _allData);
       } else if (e.target.id === 'release') {
-        if (_rowData.status === 'Ready') {
+        if (_rowData.status.toLowerCase() === cons.STATE_READY) {
           utils.alert('warning', 'Warning', 'Order has already been released');
           closeForm();
         } else {
-          updateOrder('Ready');
+          updateOrder(cons.STATE_READY);
         }
       } else if (e.target.id === 'delete') {
-        updateOrder('Deleted');
+        updateOrder(cons.STATE_DELETED);
       }
     });
   }
@@ -101,7 +107,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
    */
   function updateOrder(action) {
     var line = writeInfluxLine(action);
-    if (action === 'Deleted') {
+    if (action.toLowerCase() === cons.STATE_DELETED) {
       deleteCurrentAndUpdateAffectOrders(line);
     } else {
       utils.post(influx.writeUrl, line).then(function (res) {
@@ -201,12 +207,15 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
       tableCtrl = _table_ctrl;
     }, function (_influxHelper) {
       influx = _influxHelper;
+    }, function (_constants) {
+      cons = _constants;
     }, function (_moment) {
       moment = _moment.default;
     }],
     execute: function () {
       _rowData = void 0;
       _allData = void 0;
+      _orderStates = void 0;
 
       closeForm = function closeForm() {
         $('a#order-mgt-scheduler-action-option-close-btn').trigger('click');

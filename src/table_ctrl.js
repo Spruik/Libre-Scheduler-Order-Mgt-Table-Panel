@@ -10,6 +10,7 @@ import {showOrderEditingForm} from './order_form_ctrl';
 import {showActionOptionsForm} from './action_options_form_ctrl'
 
 import * as utils from './utils'
+import * as cons from './constants'
 
 import './css/style.css!';
 import './css/instant-serach.css!';
@@ -203,7 +204,7 @@ export class TableCtrl extends MetricsPanelCtrl {
     let rows = dataList[0].rows
     rows = rows.filter(row => {
         const lowerCaseRow = row.map(elem => (typeof elem === 'string') ? elem.toLowerCase() : elem)
-        if (lowerCaseRow.indexOf('replaced') === -1 && lowerCaseRow.indexOf('deleted') === -1) {
+        if (lowerCaseRow.indexOf(cons.STATE_REPLACED) === -1 && lowerCaseRow.indexOf(cons.STATE_DELETED) === -1) {
           return row
         }
     })

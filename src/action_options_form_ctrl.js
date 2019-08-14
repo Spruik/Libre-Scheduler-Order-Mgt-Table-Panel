@@ -3,10 +3,12 @@ import { appEvents } from 'app/core/core'
 import * as utils from './utils'
 import * as tableCtrl from './table_ctrl'
 import * as influx from './influxHelper'
+import * as cons from './constants'
 import moment from 'moment'
 
 let _rowData
 let _allData
+let _orderStates
 
 const closeForm = () => {
   $('a#order-mgt-scheduler-action-option-close-btn').trigger('click')
@@ -30,7 +32,7 @@ function showActionOptionsForm(productionLine, orderId, productDesc, productId){
 
 function init(res){
   _rowData = res
-  if(_rowData.status.toLowerCase() !== 'planned' && _rowData.status.toLowerCase() !== 'ready'){
+  if(_rowData.status.toLowerCase() !== cons.STATE_PLAN && _rowData.status.toLowerCase() !== cons.STATE_READY){
     utils.alert('warning', 'Warning', 'This order is ' + _rowData.status + ' and is no longer available for editing')
     return
   }
@@ -59,7 +61,13 @@ function getRowData(allData, tags){
       if (data.length === 0) {
         reject('Order not found')
       }else {
-        resolve(data)
+        const url = `${utils.postgRestHost}order_state`
+        utils.get(url).then(res => {
+          _orderStates = res
+          resolve(data)
+        }).catch(e => {
+          reject(`error due to order state configuration`)
+        })
       }
   })
 }
@@ -76,14 +84,14 @@ function addListeners() {
     if (e.target.id === 'edit') {
       showOrderEditingForm(_rowData, _allData)
     }else if (e.target.id === 'release') {
-      if (_rowData.status === 'Ready') {
+      if (_rowData.status.toLowerCase() === cons.STATE_READY) {
         utils.alert('warning', 'Warning', 'Order has already been released')
         closeForm()
       }else {
-        updateOrder('Ready')
+        updateOrder(cons.STATE_READY)
       }
     }else if (e.target.id === 'delete') {
-      updateOrder('Deleted')
+      updateOrder(cons.STATE_DELETED)
     }
 
   })
@@ -105,7 +113,7 @@ function removeListeners() {
  */
 function updateOrder(action) {
   const line = writeInfluxLine(action)
-  if (action === 'Deleted') {
+  if (action.toLowerCase() === cons.STATE_DELETED) {
     deleteCurrentAndUpdateAffectOrders(line)
   }else{
     utils.post(influx.writeUrl, line).then(res => {

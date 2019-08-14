@@ -13,7 +13,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
    */
   function writeLineForUpdate(status, data) {
     // For influxdb tag keys, must add a forward slash \ before each space
-    console.log(data);
 
     var product_desc = data.product_desc.split(' ').join('\\ ');
 
@@ -45,7 +44,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'planned_rate=' + data.planned_rate;
 
     //   console.log('writeLineForUpdate');
-    //   console.log(line);
     return line;
   }
 
@@ -70,7 +68,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'planned_rate=' + data.plannedRate;
 
     //   console.log('writeLineForUpdateWithChangingTime');
-    //   console.log(line);
     return line;
   }
 
@@ -132,7 +129,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'planned_rate=' + data.planned_rate;
 
     //   console.log('writeLineForTimeUpdate');
-    //   console.log(line);
     return line;
   }
 
@@ -155,7 +151,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     line += 'planned_rate=' + data.plannedRate;
 
     //   console.log('writeLineForUpdateWithRemovingTime');
-    //   console.log(line);
     return line;
   }
 
