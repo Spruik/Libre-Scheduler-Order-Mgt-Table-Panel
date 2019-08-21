@@ -13,9 +13,9 @@ let hasTurnedAround = false
 export function writeLineForUpdate (status, data) {
   // For influxdb tag keys, must add a forward slash \ before each space
   
-  let product_desc = data.product_desc.split(' ').join('\\ ')
+  // let product_desc = data.product_desc.split(' ').join('\\ ')
 
-  let line = writeTags(data.order_id, data.product_id, product_desc)
+  let line = writeTags(data.order_id, data.product_id)
   
   if (data.compl_qty !== null && data.compl_qty !== undefined) {
     line += 'compl_qty=' + data.compl_qty + ','
@@ -34,6 +34,7 @@ export function writeLineForUpdate (status, data) {
   const endTime = data.scheduled_end_datetime ? data.scheduled_end_datetime : 0
   
   line += 'order_state="' + status + '"' + ','
+  line += 'product_desc="' + data.product_desc + '"' + ','
   line += 'order_date="' + data.order_date + '"' + ','
   line += 'planned_changeover_time="' + data.planned_changeover_time + '"' + ','
   line += 'scheduled_end_datetime=' + endTime + ','
@@ -51,10 +52,11 @@ export function writeLineForUpdateWithChangingTime (data, currentStatus, startTi
   let product_desc = data.product.split(' | ')[1]
 
   // For influxdb tag keys, must add a forward slash \ before each space
-  product_desc = product_desc.split(' ').join('\\ ')
+  // product_desc = product_desc.split(' ').join('\\ ')
 
-  let line = writeTags(data.orderId, product_id, product_desc)
+  let line = writeTags(data.orderId, product_id)
   line += 'order_state="' + currentStatus + '"' + ','
+  line += 'product_desc="' + product_desc + '"' + ','
   line += 'order_date="' + data.date + '"' + ','
   line += 'production_line="' + data.productionLine + '"' + ','
   line += 'planned_changeover_time="' + data.changeover + '"' + ','
@@ -100,9 +102,9 @@ export function writeLineForTimeUpdate (data, timeDiff, action) {
       : (startTime = moment(data.scheduled_start_datetime).add(roundedTimeDiff).valueOf())
 
   // For influxdb tag keys, must add a forward slash \ before each space
-  let product_desc = data.product_desc.split(' ').join('\\ ')
+  // let product_desc = data.product_desc.split(' ').join('\\ ')
 
-  let line = writeTags(data.order_id, data.product_id, product_desc)
+  let line = writeTags(data.order_id, data.product_id)
 
   if (data.compl_qty !== null && data.compl_qty !== undefined) {
     line += 'compl_qty=' + data.compl_qty + ','
@@ -118,6 +120,7 @@ export function writeLineForTimeUpdate (data, timeDiff, action) {
   }
 
   line += 'order_state="' + data.status + '"' + ','
+  line += 'product_desc="' + data.product_desc + '"' + ','
   line += 'order_date="' + data.order_date + '"' + ','
   line += 'planned_changeover_time="' + data.planned_changeover_time + '"' + ','
   line += 'production_line="' + data.production_line + '"' + ','
@@ -135,10 +138,11 @@ export function writeLineForUpdateWithRemovingTime (data, currentStatus) {
   let product_desc = data.product.split(' | ')[1]
 
   // For influxdb tag keys, must add a forward slash \ before each space
-  product_desc = product_desc.split(' ').join('\\ ')
+  // product_desc = product_desc.split(' ').join('\\ ')
 
-  let line = writeTags(data.orderId, product_id, product_desc)
+  let line = writeTags(data.orderId, product_id)
   line += 'order_state="' + currentStatus + '"' + ','
+  line += 'product_desc="' + product_desc + '"' + ','
   line += 'order_date="' + data.date + '"' + ','
   line += 'production_line="' + data.productionLine + '"' + ','
   line += 'planned_changeover_time="' + data.changeover + '"' + ','
@@ -150,10 +154,8 @@ export function writeLineForUpdateWithRemovingTime (data, currentStatus) {
   return line
 }
 
-function writeTags(order_id, prod_id, prod_desc){
-  return 'OrderPerformance,order_id=' + order_id +
-  ',product_id=' + prod_id +
-  ',product_desc=' + prod_desc + ' '
+function writeTags(order_id, prod_id){
+  return `OrderPerformance,order_id=${order_id},product_id=${prod_id} `
 }
 
   /**

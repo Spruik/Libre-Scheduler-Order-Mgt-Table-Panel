@@ -14,6 +14,8 @@ import * as cons from './constants'
 
 import './css/style.css!';
 import './css/instant-serach.css!';
+import './css/datepicker.css!';
+import './css/timepicker.css!';
 
 const panelDefaults = {
   targets: [{}],

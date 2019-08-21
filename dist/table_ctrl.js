@@ -1,6 +1,6 @@
 'use strict';
 
-System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './constants', './css/style.css!', './css/instant-serach.css!'], function (_export, _context) {
+System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformers', './editor', './column_options', './renderer', './order_form_ctrl', './action_options_form_ctrl', './utils', './constants', './css/style.css!', './css/instant-serach.css!', './css/datepicker.css!', './css/timepicker.css!'], function (_export, _context) {
   "use strict";
 
   var _, $, moment, MetricsPanelCtrl, transformDataToTable, tablePanelEditor, columnOptionsTab, TableRenderer, showOrderEditingForm, showActionOptionsForm, utils, cons, _slicedToArray, _createClass, _get, panelDefaults, _reconstructed_data, _ctrl, TableCtrl;
@@ -72,7 +72,7 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
       utils = _utils;
     }, function (_constants) {
       cons = _constants;
-    }, function (_cssStyleCss) {}, function (_cssInstantSerachCss) {}],
+    }, function (_cssStyleCss) {}, function (_cssInstantSerachCss) {}, function (_cssDatepickerCss) {}, function (_cssTimepickerCss) {}],
     execute: function () {
       _slicedToArray = function () {
         function sliceIterator(arr, i) {

@@ -162,9 +162,9 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
    */
   function writeInfluxLine(status) {
     //For influxdb tag keys, must add a forward slash \ before each space 
-    var product_desc = _rowData.product_desc.split(' ').join('\\ ');
+    // let product_desc = _rowData.product_desc.split(' ').join('\\ ')
 
-    var line = 'OrderPerformance,order_id=' + _rowData.order_id + ',product_id=' + _rowData.product_id + ',product_desc=' + product_desc + ' ';
+    var line = 'OrderPerformance,order_id=' + _rowData.order_id + ',product_id=' + _rowData.product_id + ' ';
 
     if (_rowData.compl_qty !== null && _rowData.compl_qty !== undefined) {
       line += 'compl_qty=' + _rowData.compl_qty + ',';
@@ -185,6 +185,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
     }
 
     line += 'order_state="' + status + '"' + ',';
+    line += 'product_desc="' + _rowData.product_desc + '"' + ',';
     line += 'order_date="' + _rowData.order_date + '"' + ',';
     line += 'planned_changeover_time="' + _rowData.planned_changeover_time + '"' + ',';
     line += 'production_line="' + _rowData.production_line + '"' + ',';
