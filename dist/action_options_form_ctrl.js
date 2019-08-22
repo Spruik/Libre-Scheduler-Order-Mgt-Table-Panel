@@ -170,7 +170,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
       line += 'compl_qty=' + _rowData.compl_qty + ',';
     }
     if (_rowData.machine_state !== null && _rowData.machine_state !== undefined) {
-      line += 'machine_state="' + _rowData.machine_state + '"' + ',';
+      line += 'machine_state="' + getRid(_rowData.machine_state) + '"' + ',';
     }
     if (_rowData.scrap_qty !== null && _rowData.scrap_qty !== undefined) {
       line += 'scrap_qty=' + _rowData.scrap_qty + ',';
@@ -184,17 +184,21 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
       line += 'scheduled_start_datetime=' + _rowData.scheduled_start_datetime + ',';
     }
 
-    line += 'order_state="' + status + '"' + ',';
-    line += 'product_desc="' + _rowData.product_desc + '"' + ',';
+    line += 'order_state="' + getRid(status) + '"' + ',';
+    line += 'product_desc="' + getRid(_rowData.product_desc) + '"' + ',';
     line += 'order_date="' + _rowData.order_date + '"' + ',';
     line += 'planned_changeover_time="' + _rowData.planned_changeover_time + '"' + ',';
-    line += 'production_line="' + _rowData.production_line + '"' + ',';
+    line += 'production_line="' + getRid(_rowData.production_line) + '"' + ',';
     line += 'order_qty=' + _rowData.order_qty + ',';
     line += 'planned_rate=' + _rowData.planned_rate;
 
     //   console.log('writeInfluxLine');
     //   console.log(line);
     return line;
+  }
+
+  function getRid(x) {
+    return x.split('"').join('\\"');
   }
 
   return {
