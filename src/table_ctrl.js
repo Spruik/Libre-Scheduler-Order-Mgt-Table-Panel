@@ -347,7 +347,8 @@ export class TableCtrl extends MetricsPanelCtrl {
       appendTableRows(tbodyElem);
       appendPaginationControls(footerElem);
 
-      rootElem.css({ 'max-height': panel.scroll ? getTableHeight() : '' });
+      const height = parseInt(getTableHeight().split('px')[0]) - 38 + 'px'
+      rootElem.css({ 'max-height': panel.scroll ? height : '' });
 
       // get current table column dimensions 
       if (ctrl.table.columns) {

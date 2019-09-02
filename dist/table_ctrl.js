@@ -516,7 +516,8 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
               appendTableRows(tbodyElem);
               appendPaginationControls(footerElem);
 
-              rootElem.css({ 'max-height': panel.scroll ? getTableHeight() : '' });
+              var height = parseInt(getTableHeight().split('px')[0]) - 38 + 'px';
+              rootElem.css({ 'max-height': panel.scroll ? height : '' });
 
               // get current table column dimensions 
               if (ctrl.table.columns) {
