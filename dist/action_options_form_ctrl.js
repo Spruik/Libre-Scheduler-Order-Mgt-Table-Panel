@@ -9,14 +9,19 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
    * Expect four params which are the tags values and are for querying the record data
    * Show the action options form once the query is finished
    * Remove listener and then add listener, which is to prevent listeners duplication
-   * @param {*} productionLine 
-   * @param {*} orderId 
-   * @param {*} productDesc 
-   * @param {*} productId 
+   * @param {*} productionLine
+   * @param {*} orderId
+   * @param {*} productDesc
+   * @param {*} productId
    */
   function showActionOptionsForm(productionLine, orderId, productDesc, productId) {
     //get data
-    var tags = { prodLine: productionLine, orderId: orderId, prodDesc: productDesc, prodId: productId };
+    var tags = {
+      prodLine: productionLine,
+      orderId: orderId,
+      prodDesc: productDesc,
+      prodId: productId
+    };
     _allData = tableCtrl.allData();
     getRowData(_allData, tags).then(function (res) {
       init(res);
@@ -75,7 +80,6 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
    */
   function addListeners() {
     $(document).on('click', 'input[type="radio"][name="order-mgt-scheduler-actions-radio"]', function (e) {
-
       if (e.target.id === 'edit') {
         showOrderEditingForm(_rowData, _allData);
       } else if (e.target.id === 'release') {
@@ -103,7 +107,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
    * Use the action var passed in to write the line
    * Then update the record
    * Stop and prompt error if it fails
-   * @param {*} action 
+   * @param {*} action
    */
   function updateOrder(action) {
     var line = writeInfluxLine(action);
@@ -135,7 +139,7 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
     });
 
     //work out thisOrder's total duration, which = its duration + its changeover duration
-    var deletingOrderDurationHour = moment.duration(_rowData.order_qty / _rowData.planned_rate, 'hours');
+    var deletingOrderDurationHour = moment.duration(_rowData.order_qty / (_rowData.planned_rate * 60), 'hours');
     var deletingOrderChangeover = moment.duration(_rowData.planned_changeover_time, 'H:mm:ss');
     var deletingOrderTotalDur = deletingOrderDurationHour.add(deletingOrderChangeover);
 
@@ -158,10 +162,10 @@ System.register(['./order_form_ctrl', 'app/core/core', './utils', './table_ctrl'
   /**
    * Expect the status string (Normally are: 'Ready' or 'Deleted')
    * Then changed the status in the line with anything else unchanged
-   * @param {*} status 
+   * @param {*} status
    */
   function writeInfluxLine(status) {
-    //For influxdb tag keys, must add a forward slash \ before each space 
+    //For influxdb tag keys, must add a forward slash \ before each space
     // let product_desc = _rowData.product_desc.split(' ').join('\\ ')
 
     var line = 'OrderPerformance,order_id=' + _rowData.order_id + ',product_id=' + _rowData.product_id + ' ';

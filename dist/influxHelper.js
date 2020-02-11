@@ -81,7 +81,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
   _export('writeLineForUpdateWithChangingTime', writeLineForUpdateWithChangingTime);
 
   function writeLineForTimeUpdate(data, timeDiff, action) {
-
     hasTurnedAround = false;
     var roundedTimeDiff = roundTime(timeDiff);
 
@@ -100,6 +99,11 @@ System.register(['./utils', 'moment'], function (_export, _context) {
     var endTime = action === 'subtract' ? endTime = moment(data.scheduled_end_datetime).subtract(roundedTimeDiff).valueOf() : endTime = moment(data.scheduled_end_datetime).add(roundedTimeDiff).valueOf();
 
     var startTime = action === 'subtract' ? startTime = moment(data.scheduled_start_datetime).subtract(roundedTimeDiff).valueOf() : startTime = moment(data.scheduled_start_datetime).add(roundedTimeDiff).valueOf();
+
+    console.log('startTime');
+    console.log(moment(startTime).format('YYYY-MM-DD HH:MM:SS'));
+    console.log('endTime');
+    console.log(moment(endTime).format('YYYY-MM-DD HH:MM:SS'));
 
     // For influxdb tag keys, must add a forward slash \ before each space
     // let product_desc = data.product_desc.split(' ').join('\\ ')
@@ -163,11 +167,11 @@ System.register(['./utils', 'moment'], function (_export, _context) {
   }
 
   /**
-  * Take a moment duration obj, take this obj's hours mins and seconds to make a new moment duration
-  * The purpose is to make a new duration with rounded milsec that is easier for calculation
-  * Return the new duration with rounded milsec
-  * @param {moment duration obj} timeDiff The moment duration obj
-  */
+   * Take a moment duration obj, take this obj's hours mins and seconds to make a new moment duration
+   * The purpose is to make a new duration with rounded milsec that is easier for calculation
+   * Return the new duration with rounded milsec
+   * @param {moment duration obj} timeDiff The moment duration obj
+   */
   function roundTime(timeDiff) {
     var timeText = getTimeText(timeDiff);
     return moment.duration(timeText, 'H:mm:ss');

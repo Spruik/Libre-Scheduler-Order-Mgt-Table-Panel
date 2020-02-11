@@ -40,14 +40,12 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} data
    */
   function showOrderEditingForm(data, alldata) {
-
     _rowData = data;
     _allData = alldata;
 
     getProductsAndEquipments(callback);
 
     function callback() {
-
       appEvents.emit('show-modal', {
         src: 'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/order_form.html',
         modalClass: 'confirm-modal',
@@ -115,7 +113,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * Get the product list and production line list from postgresql
    * Call the callback fn passed in once it is finished
    * Stop and prompt error when it fails
-   * @param {fn} callback 
+   * @param {fn} callback
    */
   function getProductsAndEquipments(callback) {
     var productsUrl = utils.postgRestHost + 'product';
@@ -180,8 +178,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
   }
 
   function updateDuration(qty, rate) {
-
-    if (qty !== "" && rate !== "") {
+    if (qty !== '' && rate !== '') {
       var durationHrs = Number(parseFloat(qty).toFixed(2)) / Number((parseFloat(rate) * 60).toFixed(2));
       var momentDuration = moment.duration(durationHrs, 'hours');
 
@@ -223,10 +220,9 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * Expect the form data and then check if the form data is valid
    * If data is valid, check if the tags are changed, simply update the record if tags are unchanged
    * Or create a new record with the validated form data then update the old record's status as 'Replaced'
-   * @param {*} data 
+   * @param {*} data
    */
   function submitOrder(data) {
-
     var inputValues = _defineProperty({
       orderId: data[0].value,
       orderQty: data[1].value,
@@ -245,9 +241,11 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
   }
 
   function updateOrder(inputValues) {
+    console.log('in update order');
     //the orders that are in the original line that this order was in and that are being affected because this order changes line
     var ordersBeingAffected = getOrdersBeingAffect(_allData, inputValues);
     _ordersBeingAffected = ordersBeingAffected;
+    console.log('_ordersBeingAffected', _ordersBeingAffected);
 
     if (!isLineHavingSpareTimeForTheDay(_allData, inputValues, _rowData)) {
       utils.alert('warning', 'Warning', "There is no spare space for this order to fit in this date's schedule");
@@ -276,6 +274,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
 
   function updateOldAndNewOrders(inputValues) {
     if (_rowData) {
+      console.log('in edit order-');
       var line = influx.writeLineForUpdate(cons.STATE_REPLACED, _rowData);
       utils.post(influx.writeUrl, line).then(function (res) {
         //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
@@ -294,6 +293,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
         utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
       });
     } else {
+      console.log('in new order');
       //if there is no _rowdata, meaning that it is being created, so no need to update
       if (isLineChanged(inputValues)) {
         updateWithRemoving(inputValues);
@@ -317,6 +317,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} inputValues User input
    */
   function updateWithChanging(inputValues) {
+    console.log('in updateWithChanging');
     var originalStartTime = _rowData.scheduled_start_datetime;
     //The difference between the original changeover and the edited changeover
     var changeoverDiff = moment.duration(inputValues.changeover).subtract(moment.duration(_rowData.planned_changeover_time));
@@ -326,9 +327,11 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
 
     //calc the difference between the edited order's total duration and the original order's total duration
     //so that all the affected orders know how many to add/subtract
-    var oldTotal = moment.duration(_rowData.order_qty / _rowData.planned_rate, 'hours').add(moment.duration(_rowData.planned_changeover_time));
+    var oldTotal = moment.duration(_rowData.order_qty / (_rowData.planned_rate * 60), 'hours').add(moment.duration(_rowData.planned_changeover_time));
+
     var newTotal = duration.add(moment.duration(inputValues.changeover));
     var difference = oldTotal.subtract(newTotal);
+    console.log('dif', difference);
 
     var line = influx.writeLineForUpdateWithChangingTime(inputValues, _rowData.status, startTime.valueOf(), endTime.valueOf());
     utils.post(influx.writeUrl, line).then(function (res) {
@@ -352,6 +355,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} inputValues The user input
    */
   function updateWithRemoving(inputValues) {
+    console.log('in updateWithRemoving');
     var initState = getInitState();
     if (!initState) {
       utils.alert('error', 'Error', 'Cannot find Initial State from the Order State Config Table');
@@ -361,7 +365,9 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
 
     utils.post(influx.writeUrl, line).then(function (res) {
       if (_ordersBeingAffected.length > 0) {
+        console.log('starting to get dif and then update');
         var difference = getDiff(inputValues);
+        console.log('dif after get dif', difference);
         updateAffectedOrders(inputValues, difference);
       } else {
         closeForm();
@@ -381,8 +387,10 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} difference The time difference that all affected orders will need to add/subtract
    */
   function updateAffectedOrders(inputValues, difference) {
+    console.log('in updateAffectedOrders');
     var promises = [];
     _ordersBeingAffected.forEach(function (order) {
+      console.log('in updating single order', order);
       var line = influx.writeLineForTimeUpdate(order, difference, 'subtract');
       var prom = utils.post(influx.writeUrl, line);
       promises.push(prom);
@@ -411,7 +419,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
   }
 
   function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
-
+    console.log('in isLineHavingSpareTimeForTheDay');
     //all orders in the targeting line (except the editing order itself (if line not changed))
     var affectedOrders = allData.filter(function (order) {
       return order.production_line === inputValues.productionLine && order.order_date === inputValues.date;
@@ -465,10 +473,9 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * Expect the user inputs
    * Compare the user inputs and the globe scope var called 'rowData'
    * Check if the user inputs is different from the rowData to determine if the Tags are changed
-   * @param {*} inputs 
+   * @param {*} inputs
    */
   function hasTagsChanged(inputs) {
-
     if (!_rowData) {
       //if there is no rowData, meaning that the user is creating a new order, so return false
       return false;
@@ -491,10 +498,9 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * Expect the user inputs
    * Check if the user inputs are valid
    * Stop and prompt error if the inputs are not valid
-   * @param {*} data 
+   * @param {*} data
    */
   function isValueValid(data) {
-
     var dateRegExp = new RegExp('^[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))$');
     var prodList = products.reduce(function (arr, p) {
       var str = p.id + ' | ' + p.product_desc;
