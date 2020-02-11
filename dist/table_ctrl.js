@@ -165,14 +165,14 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
           pattern: 'Time',
           alias: 'Time',
           dateFormat: 'YYYY-MM-DD HH:mm:ss',
-          headerColor: "rgba(51, 181, 229, 1)"
+          headerColor: 'rgba(51, 181, 229, 1)'
         }, {
           unit: 'short',
           type: 'number',
           alias: '',
           decimals: 2,
-          headerColor: "rgba(51, 181, 229, 1)",
-          colors: ["rgba(245, 54, 54, 0.9)", "rgba(237, 129, 40, 0.89)", "rgba(50, 172, 45, 0.97)"],
+          headerColor: 'rgba(51, 181, 229, 1)',
+          colors: ['rgba(245, 54, 54, 0.9)', 'rgba(237, 129, 40, 0.89)', 'rgba(50, 172, 45, 0.97)'],
           colorMode: null,
           pattern: '/.*/',
           thresholds: []
@@ -215,7 +215,6 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
           $(document).off('click', 'i.add-order-btn');
           //Show form if a row is clicked
           $(document).on('click', 'tr.tr-affect#order-mgt-scheduler-table-tr', function (e) {
-
             var rowData = $('td', this).map(function (index, td) {
               if (td.childNodes.length === 2) {
                 return td.childNodes[1].nodeValue;
@@ -226,10 +225,10 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
               }
             });
 
-            var prodLineIndex = $scope.ctrl.colDimensions.indexOf("production_line");
-            var orderIdIndex = $scope.ctrl.colDimensions.indexOf("order_id");
-            var prodDescIndex = $scope.ctrl.colDimensions.indexOf("product_desc");
-            var prodIdIndex = $scope.ctrl.colDimensions.indexOf("product_id");
+            var prodLineIndex = $scope.ctrl.colDimensions.indexOf('production_line');
+            var orderIdIndex = $scope.ctrl.colDimensions.indexOf('order_id');
+            var prodDescIndex = $scope.ctrl.colDimensions.indexOf('product_desc');
+            var prodIdIndex = $scope.ctrl.colDimensions.indexOf('product_id');
             if (!~prodLineIndex || !~orderIdIndex || !~prodDescIndex || !~prodIdIndex) {
               utils.alert('error', 'Error', 'Get not get this order from the database, please contact the dev team');
               return;
@@ -283,10 +282,9 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
         }, {
           key: 'onDataReceived',
           value: function onDataReceived(dataList) {
-
             dataList = this.reorderData(dataList); // put production line in the first column
             dataList = this.filter(dataList); // filter out those with status of 'replaced' or 'deleted' and those that are not in the time range
-            dataList = this.sort(dataList, "scheduled_start_datetime"); // sort rows so that all rows are sort/order by scheduled_start_time
+            dataList = this.sort(dataList, 'scheduled_start_datetime'); // sort rows so that all rows are sort/order by scheduled_start_time
 
             _reconstructed_data = utils.reconstruct(dataList);
 
@@ -307,6 +305,8 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
                 }
               }
             }
+
+            utils.queryProductionLineDetails();
 
             this.render();
           }
@@ -519,7 +519,7 @@ System.register(['lodash', 'jquery', 'moment', 'app/plugins/sdk', './transformer
               var height = parseInt(getTableHeight().split('px')[0]) - 38 + 'px';
               rootElem.css({ 'max-height': panel.scroll ? height : '' });
 
-              // get current table column dimensions 
+              // get current table column dimensions
               if (ctrl.table.columns) {
                 ctrl.colDimensions = ctrl.table.columns.filter(function (x) {
                   return !x.hidden;

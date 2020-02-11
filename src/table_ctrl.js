@@ -1,16 +1,16 @@
 import _ from 'lodash';
 import $ from 'jquery';
-import moment from 'moment'
-import {MetricsPanelCtrl} from 'app/plugins/sdk';
-import {transformDataToTable} from './transformers';
-import {tablePanelEditor} from './editor';
-import {columnOptionsTab} from './column_options';
-import {TableRenderer} from './renderer';
-import {showOrderEditingForm} from './order_form_ctrl';
-import {showActionOptionsForm} from './action_options_form_ctrl'
+import moment from 'moment';
+import { MetricsPanelCtrl } from 'app/plugins/sdk';
+import { transformDataToTable } from './transformers';
+import { tablePanelEditor } from './editor';
+import { columnOptionsTab } from './column_options';
+import { TableRenderer } from './renderer';
+import { showOrderEditingForm } from './order_form_ctrl';
+import { showActionOptionsForm } from './action_options_form_ctrl';
 
-import * as utils from './utils'
-import * as cons from './constants'
+import * as utils from './utils';
+import * as cons from './constants';
 
 import './css/style.css!';
 import './css/instant-serach.css!';
@@ -28,36 +28,46 @@ const panelDefaults = {
       pattern: 'Time',
       alias: 'Time',
       dateFormat: 'YYYY-MM-DD HH:mm:ss',
-      headerColor: "rgba(51, 181, 229, 1)"
+      headerColor: 'rgba(51, 181, 229, 1)'
     },
     {
       unit: 'short',
       type: 'number',
       alias: '',
       decimals: 2,
-      headerColor: "rgba(51, 181, 229, 1)",
-      colors: ["rgba(245, 54, 54, 0.9)", "rgba(237, 129, 40, 0.89)", "rgba(50, 172, 45, 0.97)"],
+      headerColor: 'rgba(51, 181, 229, 1)',
+      colors: [
+        'rgba(245, 54, 54, 0.9)',
+        'rgba(237, 129, 40, 0.89)',
+        'rgba(50, 172, 45, 0.97)'
+      ],
       colorMode: null,
       pattern: '/.*/',
-      thresholds: [],
+      thresholds: []
     }
   ],
   columns: [],
   scroll: true,
   fontSize: '100%',
-  sort: { col: 0, desc: true },
+  sort: { col: 0, desc: true }
 };
 
-let _reconstructed_data
-let _ctrl
+let _reconstructed_data;
+let _ctrl;
 
 export class TableCtrl extends MetricsPanelCtrl {
-
-  constructor($scope, $injector, templateSrv, annotationsSrv, $sanitize, variableSrv) {
+  constructor(
+    $scope,
+    $injector,
+    templateSrv,
+    annotationsSrv,
+    $sanitize,
+    variableSrv
+  ) {
     super($scope, $injector);
 
     this.pageIndex = 0;
-    
+
     if (this.panel.styles === void 0) {
       this.panel.styles = this.panel.columns;
       this.panel.columns = this.panel.fields;
@@ -72,39 +82,58 @@ export class TableCtrl extends MetricsPanelCtrl {
     this.events.on('data-snapshot-load', this.onDataReceived.bind(this));
     this.events.on('init-edit-mode', this.onInitEditMode.bind(this));
     this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
-    
+
     //Remove listener before add it
-    $(document).off('click', 'tr.tr-affect#order-mgt-scheduler-table-tr')
-    $(document).off('click', 'i.add-order-btn')
+    $(document).off('click', 'tr.tr-affect#order-mgt-scheduler-table-tr');
+    $(document).off('click', 'i.add-order-btn');
     //Show form if a row is clicked
-    $(document).on('click', 'tr.tr-affect#order-mgt-scheduler-table-tr', function (e) {
+    $(document).on(
+      'click',
+      'tr.tr-affect#order-mgt-scheduler-table-tr',
+      function(e) {
+        const rowData = $('td', this).map((index, td) => {
+          if (td.childNodes.length === 2) {
+            return td.childNodes[1].nodeValue;
+          } else if (td.childNodes.length === 1) {
+            return $(td).text();
+          } else {
+            return '';
+          }
+        });
 
-      const rowData = $('td', this).map((index, td)=>{
-        if (td.childNodes.length === 2) {
-          return td.childNodes[1].nodeValue
-        }else if (td.childNodes.length === 1) {
-          return $(td).text()
-        }else {
-          return ''
+        const prodLineIndex = $scope.ctrl.colDimensions.indexOf(
+          'production_line'
+        );
+        const orderIdIndex = $scope.ctrl.colDimensions.indexOf('order_id');
+        const prodDescIndex = $scope.ctrl.colDimensions.indexOf('product_desc');
+        const prodIdIndex = $scope.ctrl.colDimensions.indexOf('product_id');
+        if (
+          !~prodLineIndex ||
+          !~orderIdIndex ||
+          !~prodDescIndex ||
+          !~prodIdIndex
+        ) {
+          utils.alert(
+            'error',
+            'Error',
+            'Get not get this order from the database, please contact the dev team'
+          );
+          return;
+        } else {
+          showActionOptionsForm(
+            rowData[prodLineIndex],
+            rowData[orderIdIndex],
+            rowData[prodDescIndex],
+            rowData[prodIdIndex]
+          );
         }
-      })
-
-      const prodLineIndex = $scope.ctrl.colDimensions.indexOf("production_line")
-      const orderIdIndex = $scope.ctrl.colDimensions.indexOf("order_id")
-      const prodDescIndex = $scope.ctrl.colDimensions.indexOf("product_desc")
-      const prodIdIndex = $scope.ctrl.colDimensions.indexOf("product_id")
-      if (!~prodLineIndex || !~orderIdIndex || !~prodDescIndex || !~prodIdIndex) {
-        utils.alert('error', 'Error', 'Get not get this order from the database, please contact the dev team')
-        return
-      }else {
-        showActionOptionsForm(rowData[prodLineIndex],rowData[orderIdIndex],rowData[prodDescIndex],rowData[prodIdIndex])
       }
-    })
+    );
 
     //Show form with no data when the add btn is clicked
-    $(document).on('click', 'i.add-order-btn', function () {
-      showOrderEditingForm('', allData())
-    })
+    $(document).on('click', 'i.add-order-btn', function() {
+      showOrderEditingForm('', allData());
+    });
   }
 
   onInitEditMode() {
@@ -125,7 +154,7 @@ export class TableCtrl extends MetricsPanelCtrl {
         .getAnnotations({
           dashboard: this.dashboard,
           panel: this.panel,
-          range: this.range,
+          range: this.range
         })
         .then(annotations => {
           return { data: annotations };
@@ -141,12 +170,11 @@ export class TableCtrl extends MetricsPanelCtrl {
   }
 
   onDataReceived(dataList) {
-    
-    dataList = this.reorderData(dataList) // put production line in the first column
-    dataList = this.filter(dataList) // filter out those with status of 'replaced' or 'deleted' and those that are not in the time range
-    dataList = this.sort(dataList, "scheduled_start_datetime") // sort rows so that all rows are sort/order by scheduled_start_time
-    
-    _reconstructed_data = utils.reconstruct(dataList)
+    dataList = this.reorderData(dataList); // put production line in the first column
+    dataList = this.filter(dataList); // filter out those with status of 'replaced' or 'deleted' and those that are not in the time range
+    dataList = this.sort(dataList, 'scheduled_start_datetime'); // sort rows so that all rows are sort/order by scheduled_start_time
+
+    _reconstructed_data = utils.reconstruct(dataList);
 
     this.dataRaw = dataList;
     this.pageIndex = 0;
@@ -159,82 +187,96 @@ export class TableCtrl extends MetricsPanelCtrl {
         if (this.dataRaw[0].type === 'docs') {
           this.panel.transform = 'json';
         } else {
-          if (this.panel.transform === 'table' || this.panel.transform === 'json') {
+          if (
+            this.panel.transform === 'table' ||
+            this.panel.transform === 'json'
+          ) {
             this.panel.transform = 'timeseries_to_rows';
           }
         }
       }
     }
 
+    utils.queryProductionLineDetails();
+
     this.render();
   }
 
   //Reorder the column to put the productionLine go first.
-  reorderData(dataList){
+  reorderData(dataList) {
     if (dataList.length === 0) {
-      return dataList
+      return dataList;
     }
 
     if (dataList[0].columns) {
-      let index = dataList[0].columns.findIndex(col => col.text.toLowerCase() === 'production_line')
+      let index = dataList[0].columns.findIndex(
+        col => col.text.toLowerCase() === 'production_line'
+      );
       if (index !== -1) {
         //store data
-        let pro_line_col = dataList[0].columns[index]
+        let pro_line_col = dataList[0].columns[index];
         //remove data from original position
-        dataList[0].columns.splice(index,1)
+        dataList[0].columns.splice(index, 1);
         //insert data to index 1 with the stored obj
-        dataList[0].columns.splice(1,0,pro_line_col)
+        dataList[0].columns.splice(1, 0, pro_line_col);
 
         //reorder for each row data
         for (let i = 0; i < dataList[0].rows.length; i++) {
           const row = dataList[0].rows[i];
-          let pro_line_row = row[index]
-          row.splice(index, 1)
-          row.splice(1,0,pro_line_row)
+          let pro_line_row = row[index];
+          row.splice(index, 1);
+          row.splice(1, 0, pro_line_row);
         }
       }
     }
-    return dataList
+    return dataList;
   }
 
   // filter out records that are not of status of 'Replaced'
-  filter(dataList){
+  filter(dataList) {
     if (dataList.length === 0) {
-        return dataList
+      return dataList;
     }
-    
-    let rows = dataList[0].rows
+
+    let rows = dataList[0].rows;
     rows = rows.filter(row => {
-        const lowerCaseRow = row.map(elem => (typeof elem === 'string') ? elem.toLowerCase() : elem)
-        if (lowerCaseRow.indexOf(cons.STATE_REPLACED) === -1 && lowerCaseRow.indexOf(cons.STATE_DELETED) === -1) {
-          return row
-        }
-    })
-    dataList[0].rows = rows
-    return dataList
+      const lowerCaseRow = row.map(elem =>
+        typeof elem === 'string' ? elem.toLowerCase() : elem
+      );
+      if (
+        lowerCaseRow.indexOf(cons.STATE_REPLACED) === -1 &&
+        lowerCaseRow.indexOf(cons.STATE_DELETED) === -1
+      ) {
+        return row;
+      }
+    });
+    dataList[0].rows = rows;
+    return dataList;
   }
 
   //sort by schedule start time
-  sort(dataList, key){
-    if (dataList.length === 0) { return dataList }
-    
-    const cols = dataList[0].columns
-    const index = this.find(key, cols)
-    dataList[0].rows.sort((a,b) => a[index] - b[index])
-    
-    return dataList
+  sort(dataList, key) {
+    if (dataList.length === 0) {
+      return dataList;
+    }
+
+    const cols = dataList[0].columns;
+    const index = this.find(key, cols);
+    dataList[0].rows.sort((a, b) => a[index] - b[index]);
+
+    return dataList;
   }
 
   //find index related to the key in the columns
-  find(key, cols){
-    let index = 0    
-    for (const [i, col] of cols.entries()){
+  find(key, cols) {
+    let index = 0;
+    for (const [i, col] of cols.entries()) {
       if (col.text === key) {
-        index = i
-        break
+        index = i;
+        break;
       }
     }
-    return index
+    return index;
   }
 
   render() {
@@ -276,9 +318,10 @@ export class TableCtrl extends MetricsPanelCtrl {
     scope.tableData = this.renderer.render_values();
     scope.panel = 'table';
     this.publishAppEvent('show-modal', {
-      templateHtml: '<export-data-modal panel="panel" data="tableData"></export-data-modal>',
+      templateHtml:
+        '<export-data-modal panel="panel" data="tableData"></export-data-modal>',
       scope,
-      modalClass: 'modal--narrow',
+      modalClass: 'modal--narrow'
     });
   }
 
@@ -286,7 +329,7 @@ export class TableCtrl extends MetricsPanelCtrl {
     let data;
     const panel = ctrl.panel;
     let pageCount = 0;
-    _ctrl = ctrl
+    _ctrl = ctrl;
 
     function getTableHeight() {
       let panelHeight = ctrl.height;
@@ -327,7 +370,11 @@ export class TableCtrl extends MetricsPanelCtrl {
       for (let i = startPage; i < endPage; i++) {
         const activeClass = i === ctrl.pageIndex ? 'active' : '';
         const pageLinkElem = $(
-          '<li><a class="table-panel-page-link pointer ' + activeClass + '">' + (i + 1) + '</a></li>'
+          '<li><a class="table-panel-page-link pointer ' +
+            activeClass +
+            '">' +
+            (i + 1) +
+            '</a></li>'
         );
         paginationList.append(pageLinkElem);
       }
@@ -347,18 +394,20 @@ export class TableCtrl extends MetricsPanelCtrl {
       appendTableRows(tbodyElem);
       appendPaginationControls(footerElem);
 
-      const height = parseInt(getTableHeight().split('px')[0]) - 38 + 'px'
+      const height = parseInt(getTableHeight().split('px')[0]) - 38 + 'px';
       rootElem.css({ 'max-height': panel.scroll ? height : '' });
 
-      // get current table column dimensions 
+      // get current table column dimensions
       if (ctrl.table.columns) {
-        ctrl.colDimensions = ctrl.table.columns.filter(x => !x.hidden).map(x => x.text)
+        ctrl.colDimensions = ctrl.table.columns
+          .filter(x => !x.hidden)
+          .map(x => x.text);
       }
     }
 
     // hook up link tooltips
     elem.tooltip({
-      selector: '[data-link-tooltip]',
+      selector: '[data-link-tooltip]'
     });
 
     function addFilterClicked(e) {
@@ -367,7 +416,7 @@ export class TableCtrl extends MetricsPanelCtrl {
         datasource: panel.datasource,
         key: data.columns[filterData.column].text,
         value: data.rows[filterData.row][filterData.column],
-        operator: filterData.operator,
+        operator: filterData.operator
       };
 
       ctrl.variableSrv.setAdhocFilter(options);
@@ -390,15 +439,14 @@ export class TableCtrl extends MetricsPanelCtrl {
       ctrl.renderingCompleted();
     });
   }
-
 }
 
-export function allData(){
-  return _reconstructed_data
+export function allData() {
+  return _reconstructed_data;
 }
 
-export function refreshDashboard(){
-  _ctrl.timeSrv.refreshDashboard()
+export function refreshDashboard() {
+  _ctrl.timeSrv.refreshDashboard();
 }
 
 TableCtrl.templateUrl = './partials/module.html';

@@ -116,11 +116,6 @@ export function writeLineForTimeUpdate(data, timeDiff, action) {
           .add(roundedTimeDiff)
           .valueOf());
 
-  console.log('startTime');
-  console.log(moment(startTime).format('YYYY-MM-DD HH:MM:SS'));
-  console.log('endTime');
-  console.log(moment(endTime).format('YYYY-MM-DD HH:MM:SS'));
-
   // For influxdb tag keys, must add a forward slash \ before each space
   // let product_desc = data.product_desc.split(' ').join('\\ ')
 

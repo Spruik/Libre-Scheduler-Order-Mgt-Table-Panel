@@ -241,11 +241,9 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
   }
 
   function updateOrder(inputValues) {
-    console.log('in update order');
     //the orders that are in the original line that this order was in and that are being affected because this order changes line
     var ordersBeingAffected = getOrdersBeingAffect(_allData, inputValues);
     _ordersBeingAffected = ordersBeingAffected;
-    console.log('_ordersBeingAffected', _ordersBeingAffected);
 
     if (!isLineHavingSpareTimeForTheDay(_allData, inputValues, _rowData)) {
       utils.alert('warning', 'Warning', "There is no spare space for this order to fit in this date's schedule");
@@ -274,7 +272,6 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
 
   function updateOldAndNewOrders(inputValues) {
     if (_rowData) {
-      console.log('in edit order-');
       var line = influx.writeLineForUpdate(cons.STATE_REPLACED, _rowData);
       utils.post(influx.writeUrl, line).then(function (res) {
         //save the new order directly with removing its starttime and endtime to let the initialiser to init it again
@@ -293,7 +290,6 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
         utils.alert('error', 'Error', 'An error occurred when updated the order : ' + e);
       });
     } else {
-      console.log('in new order');
       //if there is no _rowdata, meaning that it is being created, so no need to update
       if (isLineChanged(inputValues)) {
         updateWithRemoving(inputValues);
@@ -317,7 +313,6 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} inputValues User input
    */
   function updateWithChanging(inputValues) {
-    console.log('in updateWithChanging');
     var originalStartTime = _rowData.scheduled_start_datetime;
     //The difference between the original changeover and the edited changeover
     var changeoverDiff = moment.duration(inputValues.changeover).subtract(moment.duration(_rowData.planned_changeover_time));
@@ -331,7 +326,6 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
 
     var newTotal = duration.add(moment.duration(inputValues.changeover));
     var difference = oldTotal.subtract(newTotal);
-    console.log('dif', difference);
 
     var line = influx.writeLineForUpdateWithChangingTime(inputValues, _rowData.status, startTime.valueOf(), endTime.valueOf());
     utils.post(influx.writeUrl, line).then(function (res) {
@@ -355,7 +349,6 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} inputValues The user input
    */
   function updateWithRemoving(inputValues) {
-    console.log('in updateWithRemoving');
     var initState = getInitState();
     if (!initState) {
       utils.alert('error', 'Error', 'Cannot find Initial State from the Order State Config Table');
@@ -365,9 +358,7 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
 
     utils.post(influx.writeUrl, line).then(function (res) {
       if (_ordersBeingAffected.length > 0) {
-        console.log('starting to get dif and then update');
         var difference = getDiff(inputValues);
-        console.log('dif after get dif', difference);
         updateAffectedOrders(inputValues, difference);
       } else {
         closeForm();
@@ -387,10 +378,8 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
    * @param {*} difference The time difference that all affected orders will need to add/subtract
    */
   function updateAffectedOrders(inputValues, difference) {
-    console.log('in updateAffectedOrders');
     var promises = [];
     _ordersBeingAffected.forEach(function (order) {
-      console.log('in updating single order', order);
       var line = influx.writeLineForTimeUpdate(order, difference, 'subtract');
       var prom = utils.post(influx.writeUrl, line);
       promises.push(prom);
@@ -419,7 +408,6 @@ System.register(['./utils', './constants', 'moment', 'app/core/core', './instant
   }
 
   function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
-    console.log('in isLineHavingSpareTimeForTheDay');
     //all orders in the targeting line (except the editing order itself (if line not changed))
     var affectedOrders = allData.filter(function (order) {
       return order.production_line === inputValues.productionLine && order.order_date === inputValues.date;

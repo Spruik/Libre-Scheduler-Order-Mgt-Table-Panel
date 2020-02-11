@@ -271,11 +271,9 @@ function submitOrder(data) {
 }
 
 function updateOrder(inputValues) {
-  console.log('in update order');
   //the orders that are in the original line that this order was in and that are being affected because this order changes line
   const ordersBeingAffected = getOrdersBeingAffect(_allData, inputValues);
   _ordersBeingAffected = ordersBeingAffected;
-  console.log('_ordersBeingAffected', _ordersBeingAffected);
 
   if (!isLineHavingSpareTimeForTheDay(_allData, inputValues, _rowData)) {
     utils.alert(
@@ -308,7 +306,6 @@ function updateOrder(inputValues) {
 
 function updateOldAndNewOrders(inputValues) {
   if (_rowData) {
-    console.log('in edit order-');
     const line = influx.writeLineForUpdate(cons.STATE_REPLACED, _rowData);
     utils
       .post(influx.writeUrl, line)
@@ -334,7 +331,6 @@ function updateOldAndNewOrders(inputValues) {
         );
       });
   } else {
-    console.log('in new order');
     //if there is no _rowdata, meaning that it is being created, so no need to update
     if (isLineChanged(inputValues)) {
       updateWithRemoving(inputValues);
@@ -358,7 +354,6 @@ function isDateChanged(inputValues) {
  * @param {*} inputValues User input
  */
 function updateWithChanging(inputValues) {
-  console.log('in updateWithChanging');
   const originalStartTime = _rowData.scheduled_start_datetime;
   //The difference between the original changeover and the edited changeover
   const changeoverDiff = moment
@@ -381,7 +376,6 @@ function updateWithChanging(inputValues) {
 
   const newTotal = duration.add(moment.duration(inputValues.changeover));
   const difference = oldTotal.subtract(newTotal);
-  console.log('dif', difference);
 
   const line = influx.writeLineForUpdateWithChangingTime(
     inputValues,
@@ -415,7 +409,6 @@ function getInitState() {
  * @param {*} inputValues The user input
  */
 function updateWithRemoving(inputValues) {
-  console.log('in updateWithRemoving');
   const initState = getInitState();
   if (!initState) {
     utils.alert(
@@ -434,9 +427,7 @@ function updateWithRemoving(inputValues) {
     .post(influx.writeUrl, line)
     .then(res => {
       if (_ordersBeingAffected.length > 0) {
-        console.log('starting to get dif and then update');
         const difference = getDiff(inputValues);
-        console.log('dif after get dif', difference);
         updateAffectedOrders(inputValues, difference);
       } else {
         closeForm();
@@ -465,10 +456,8 @@ function updateWithRemoving(inputValues) {
  * @param {*} difference The time difference that all affected orders will need to add/subtract
  */
 function updateAffectedOrders(inputValues, difference) {
-  console.log('in updateAffectedOrders');
   let promises = [];
   _ordersBeingAffected.forEach(order => {
-    console.log('in updating single order', order);
     const line = influx.writeLineForTimeUpdate(order, difference, 'subtract');
     const prom = utils.post(influx.writeUrl, line);
     promises.push(prom);
@@ -510,7 +499,6 @@ function getDiff(inputValues) {
 }
 
 function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
-  console.log('in isLineHavingSpareTimeForTheDay');
   //all orders in the targeting line (except the editing order itself (if line not changed))
   let affectedOrders = allData.filter(
     order =>

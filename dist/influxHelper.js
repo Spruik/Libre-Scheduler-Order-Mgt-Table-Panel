@@ -100,11 +100,6 @@ System.register(['./utils', 'moment'], function (_export, _context) {
 
     var startTime = action === 'subtract' ? startTime = moment(data.scheduled_start_datetime).subtract(roundedTimeDiff).valueOf() : startTime = moment(data.scheduled_start_datetime).add(roundedTimeDiff).valueOf();
 
-    console.log('startTime');
-    console.log(moment(startTime).format('YYYY-MM-DD HH:MM:SS'));
-    console.log('endTime');
-    console.log(moment(endTime).format('YYYY-MM-DD HH:MM:SS'));
-
     // For influxdb tag keys, must add a forward slash \ before each space
     // let product_desc = data.product_desc.split(' ').join('\\ ')
 
