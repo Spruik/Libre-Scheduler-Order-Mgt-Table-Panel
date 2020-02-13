@@ -274,7 +274,6 @@ function updateOrder(inputValues) {
   //the orders that are in the original line that this order was in and that are being affected because this order changes line
   const ordersBeingAffected = getOrdersBeingAffect(_allData, inputValues);
   _ordersBeingAffected = ordersBeingAffected;
-
   if (!isLineHavingSpareTimeForTheDay(_allData, inputValues, _rowData)) {
     utils.alert(
       'warning',
@@ -505,15 +504,15 @@ function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
       order.production_line === inputValues.productionLine &&
       order.order_date === inputValues.date
   );
-  affectedOrders = affectedOrders.filter(
-    order => order.order_id !== rowData.order_id
-  );
-
-  //find the line's default start time and then plus next day
+  const id = rowData ? rowData.order_id : inputValues.orderId;
+  affectedOrders = affectedOrders.filter(order => order.order_id !== id);
+  //find the line's default start time and then plus next day productionLine
   const targetDayStartTime = moment(
     moment(inputValues.date, 'YYYY-MM-DD').format('YYYY-MM-DD') +
       ' ' +
-      utils.getLineStartTime(rowData.production_line),
+      utils.getLineStartTime(
+        rowData ? rowData.production_line : inputValues.productionLine
+      ),
     'YYYY-MM-DD H:mm:ss'
   );
   const targetDayStartTimeText = targetDayStartTime.format(
@@ -523,7 +522,6 @@ function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
     targetDayStartTimeText,
     'YYYY-MM-DD H:mm:ss'
   ).add(1, 'days');
-
   //calc edited order's duration
   const duration = moment.duration(
     inputValues.orderQty / (inputValues.plannedRate * 60),
@@ -536,14 +534,12 @@ function isLineHavingSpareTimeForTheDay(allData, inputValues, rowData) {
   if (affectedOrders.length === 0) {
     return targetDayStartTime.add(totalDur).isSameOrBefore(nextDayStartTime);
   }
-
   //get the max end time
   const all_end_times = affectedOrders.map(
     order => order.scheduled_end_datetime
   );
   const maxEndTime = moment(Math.max(...all_end_times));
   maxEndTime.add(totalDur);
-
   return maxEndTime.isSameOrBefore(nextDayStartTime);
 }
 
