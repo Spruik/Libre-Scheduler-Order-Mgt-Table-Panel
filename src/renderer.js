@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import moment from 'moment';
-import kbn from 'app/core/utils/kbn';
-// import { stringToJsRegex } from '@grafana/data';
+// import kbn from 'app/core/utils/kbn';
+import { stringToJsRegex } from '@grafana/data';
 
 export class TableRenderer {
   constructor(panel, table, isUtc, sanitize, templateSrv) {
@@ -28,8 +28,8 @@ export class TableRenderer {
       for (let i = 0; i < this.panel.styles.length; i++) {
         const style = this.panel.styles[i];
 
-        // const regex = stringToJsRegex(style.pattern); //for v6.3 and above
-        const regex = kbn.stringToJsRegex(style.pattern); //for v6.0
+        const regex = stringToJsRegex(style.pattern); //for v6.3 and above
+        // const regex = kbn.stringToJsRegex(style.pattern); //for v6.0
         if (column.text.match(regex)) {
           column.style = style;
 
