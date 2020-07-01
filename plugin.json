@@ -1,23 +1,23 @@
 {
+  "id": "libre-scheduler-order-mgt-table-panel",
   "type": "panel",
   "name": "Order Scheduler Table",
-  "id": "smart-factory-scheduler-order-mgt-table-panel",
-
   "info": {
-    "description": "A table for the scheduler to manage orders",
-    "keywords": ["table", "panel"],
+    "description": "A Libre panel to create, schedule and release orders for manufacture",
+    "keywords": ["table", "panel", "libre"],
     "links": [
-      {"name": "Project site", "url": "https://github.com/Billiballa/grafana-table-panel"}
+      {"name": "Project site", "url": "https://github.com/Spruik/Libre-Scheduler-Order-Mgt-Table-Panel"},
+      {"name": "Issues", "url": "https://github.com/Spruik/Libre-Scheduler-Order-Mgt-Table-Panel/issues"}
     ],
     "logos": {
       "small": "img/icn-table-panel.svg",
       "large": "img/icn-table-panel.svg"
     },  
     "version": "1.0.0",
-    "updated": "2019-02-07"
+    "updated": "2020-07-01"
   },
   "dependencies": {
-    "grafanaVersion": "4.x.x",
+    "grafanaVersion": "6.x.x",
     "plugins": [ ]
   }
 }

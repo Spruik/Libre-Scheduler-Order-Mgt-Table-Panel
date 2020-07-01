@@ -64,7 +64,7 @@ function init(res) {
 
   appEvents.emit('show-modal', {
     src:
-      'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/action_options.html',
+      'public/plugins/libre-scheduler-order-mgt-table-panel/partials/action_options.html',
     modalClass: 'confirm-modal',
     model: {}
   });

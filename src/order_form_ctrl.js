@@ -28,24 +28,24 @@ let _orderStates;
  * @param {*} data
  */
 function showOrderEditingForm(data, alldata) {
-  _rowData = data;
-  _allData = alldata;
+  _rowData = data
+  _allData = alldata
 
-  getProductsAndEquipments(callback);
+  getProductsAndEquipments(callback)
 
-  function callback() {
+  function callback () {
     appEvents.emit('show-modal', {
       src:
-        'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/order_form.html',
+        'public/plugins/libre-scheduler-order-mgt-table-panel/partials/order_form.html',
       modalClass: 'confirm-modal',
       model: {}
-    });
+    })
 
-    tryCatchCount = 1;
-    tryCatchCtrl();
+    tryCatchCount = 1
+    tryCatchCtrl()
 
-    removeListeners();
-    addListeners();
+    removeListeners()
+    addListeners()
   }
 }
 
@@ -54,7 +54,7 @@ function showOrderEditingForm(data, alldata) {
  * Re-try if it fails
  * Stop and prompt error if it fails more than 15 times
  */
-function tryCatchCtrl() {
+function tryCatchCtrl () {
   setTimeout(() => {
     try {
       startCtrl();

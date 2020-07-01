@@ -82,7 +82,7 @@ export function tablePanelEditor($q, uiSegmentSrv) {
   return {
     restrict: 'E',
     scope: true,
-    templateUrl: 'public/plugins/smart-factory-scheduler-order-mgt-table-panel/partials/editor.html',
-    controller: TablePanelEditorCtrl,
-  };
+    templateUrl: 'public/plugins/libre-scheduler-order-mgt-table-panel/partials/editor.html',
+    controller: TablePanelEditorCtrl
+  }
 }

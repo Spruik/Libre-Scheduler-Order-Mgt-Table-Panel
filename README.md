@@ -1,4 +1,7 @@
 ## Order Mgt Table Panel for scheduler
+
+| A Libre panel to create, schedule and release orders for manufacture
+
 Custom Plugin that enables the scheduler to create and realease order
 
 ------
