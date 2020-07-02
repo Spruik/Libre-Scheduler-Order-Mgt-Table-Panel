@@ -12,8 +12,9 @@
   },
   "main": "src/module.js",
   "scripts": {
-    "lint": "eslint --color .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "standard",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "grunt build"
   },
   "keywords": [
     "table",
