@@ -84,13 +84,13 @@ To Add an order click the plus at the top right, enter details and submit.
 
 #### Edit / Release
 
-To edit an order click it in the table. In the actions popup click update. Orders can only be editted if they are in the _created_ or _released_ state. Orders that have progressed further can no longer be edited.
+To edit an order click the order row in the table. In the actions popup click Edit. Orders can only be editted if they are in the _planned_ state. Orders that have progressed further can no longer be edited.
 
 To release an order click the row from the table. In the action popup click Release.
 
 #### Delete
 
-To delete an order click it in the table. In the actions popup click delete.
+To delete an order click it in the table. In the actions popup click Delete.
 
 ## Developing
 
