@@ -3,11 +3,22 @@
   "type": "panel",
   "name": "Order Scheduler Table",
   "info": {
+    "author": {
+      "name": "Spruik Technologies",
+      "email": "info@spruiktec.com",
+      "url": "https://spruiktec.com"
+    },
     "description": "A Libre panel to create, schedule and release orders for manufacture",
     "keywords": ["table", "panel", "libre"],
     "links": [
       {"name": "Project site", "url": "https://github.com/Spruik/Libre-Scheduler-Order-Mgt-Table-Panel"},
       {"name": "Issues", "url": "https://github.com/Spruik/Libre-Scheduler-Order-Mgt-Table-Panel/issues"}
+    ],
+    "screenshot":[
+      {"name": "Panel", "url":"public/plugins/libre-scheduler-order-mgt-table-panel/docs/libre-scheduler-order-mgt-table-panel.png"},
+      {"name": "Order Actions", "url":"public/plugins/libre-scheduler-order-mgt-table-panel/docs/libre-scheduler-order-mgt-table-panel-actions.png"},
+      {"name": "Order Add", "url":"public/plugins/libre-scheduler-order-mgt-table-panel/docs/libre-scheduler-order-mgt-table-panel-add.png"},
+      {"name": "Panel Metrics", "url":"public/plugins/libre-scheduler-order-mgt-table-panel/docs/libre-scheduler-order-mgt-table-panel-metrics.png"}
     ],
     "logos": {
       "small": "img/icn-table-panel.svg",
