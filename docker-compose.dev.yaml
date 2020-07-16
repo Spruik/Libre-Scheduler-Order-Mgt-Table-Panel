@@ -39,6 +39,8 @@ services:
       - 8086:8086
   simulator:
     image: spruiktec/libre-simulator
+    ports:
+      - 1880:1880
     depends_on: 
       - postrest
   postgres:

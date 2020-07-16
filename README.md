@@ -1,6 +1,6 @@
 # Libre Order Mgt Table Panel for scheduler
 
-| A Libre panel to create, schedule and release orders for manufacture
+> A Libre panel to create, schedule and release orders for manufacture
 
 This panel gives a scheduler the ability to create, update and delete manufacturing orders for a production line and product. In addition to creating orders, this panel allows schedulers to release an order for manufacture. Business rules are in place to prevent changes to an order that has already been executed on. This panel is part of [Libre](https://github.com/Spruik/Libre). This plugin interfaces to a no security json rest api for equipment, orders and products running on the same grafana server. This panel is targeted at Grafana v6.x.x. only.
 
@@ -110,7 +110,7 @@ Start by cloning this repository
 ```shell
 ~/
 $ git clone https://github.com/Spruik/Libre-Scheduler-Order-Mgt-Table-Panel
-Cloning into 'libre-scheduler-order-mgt-table-panel'...
+Cloning into 'Libre-Scheduler-Order-Mgt-Table-Panel'...
 remote: Enumerating objects: 46, done.
 remote: Counting objects: 100% (46/46), done.
 remote: Compressing objects: 100% (31/31), done.
@@ -121,8 +121,8 @@ Unpacking objects: 100% (46/46), done.
 Enter project and install dependencies
 
 ```shell
-$ cd ./libre-scheduler-order-mgt-table-panel
-~/libre-scheduler-order-mgt-table-panel
+$ cd ./Libre-Scheduler-Order-Mgt-Table-Panel
+~/Libre-Scheduler-Order-Mgt-Table-Panel
 $ npm install
 ...
 added 714 packages from 399 contributors and audited 719 packages in 11.871s
@@ -143,16 +143,21 @@ Run grunt to build the panel
 
 ```shell
 $ grunt
-
 Running "copy:src_to_dist" (copy) task
-Created 2 directories, copied 8 files
+Created 3 directories, copied 10 files
 
 Running "copy:libs" (copy) task
+Copied 2 files
+
+Running "copy:readme" (copy) task
+Created 1 directory, copied 8 files
+
+Running "string-replace:dist" (string-replace) task
+
+1 files created
 
 Running "copy:pluginDef" (copy) task
 Copied 1 file
-
-Running "copy:image_to_dist" (copy) task
 
 Running "babel:dist" (babel) task
 
@@ -163,18 +168,20 @@ Done, without errors.
 Start docker-compose.dev.yml detached
 
 ```shell
-~/libre-scheduler-order-mgt-table-panel
-$ docker-compose -f docker-compose.dev.yml up -d
-Starting libre-scheduler-order-mgt-table-panel_postgres_1
-Starting libre-scheduler-order-mgt-table-panel_postrest_1
-Starting libre-scheduler-order-mgt-table-panel_simulator_1
-Starting libre-scheduler-order-mgt-table-panel_grafana_1
+~/Libre-Scheduler-Order-Mgt-Table-Panel
+$ docker-compose -f docker-compose.dev.yaml up -d
+Starting libre-scheduler-order-mgt-table-panel_influx_1   ... done
+Starting libre-scheduler-order-mgt-table-panel_postgres_1 ... done
+Starting libre-scheduler-order-mgt-table-panel_postrest_1 ... done
+Recreating libre-scheduler-order-mgt-table-panel_simulator_1 ... done
+Starting libre-scheduler-order-mgt-table-panel_grafana_1     ... done
+
 ```
 
 Run grunt watch to recompile on change
 
 ```shell
-~/libre-scheduler-order-mgt-table-panel
+~/Libre-Scheduler-Order-Mgt-Table-Panel
 $ grunt watch
 Running "watch" task
 Waiting...
@@ -192,7 +199,7 @@ Prerequisites
 Build panel and zip into archive
 
 ```shell
-~/libre-scheduler-order-mgt-table-panel
+~/Libre-Scheduler-Order-Mgt-Table-Panel
 $ grunt build
 Running "clean:0" (clean) task
 >> 1 path cleaned.
@@ -201,10 +208,10 @@ Running "clean:1" (clean) task
 >> 1 path cleaned.
 
 Running "copy:src_to_dist" (copy) task
-Created 3 directories, copied 9 files
+Created 3 directories, copied 10 files
 
 Running "copy:libs" (copy) task
-
+Copied 2 files
 
 Running "copy:readme" (copy) task
 Created 1 directory, copied 8 files
@@ -219,9 +226,10 @@ Copied 1 file
 Running "babel:dist" (babel) task
 
 Running "compress:main" (compress) task
->> Compressed 44 files.
+>> Compressed 52 files.
 
 Done, without errors.
+
 ```
 
 Find a completed build of this panel in the root directory named `libre-scheduler-order-mgt-table-panel.zip`.
@@ -235,5 +243,10 @@ For any issue, there are fundamentally three ways an individual can contribute:
 - By helping to resolve the issue: Typically, this is done either in the form of demonstrating that the issue reported is not a problem after all, or more often, by opening a Pull Request that changes some bit of something in the panel in a concrete and reviewable manner.
 
 ## Change log
+
+- 1.0.1 Documentation Updates
+  - Expose simulator port 1880
+  - Remove unused grunt config
+  - Fix subtitle & project paths
 
 - 1.0.0 Initial Public Release
