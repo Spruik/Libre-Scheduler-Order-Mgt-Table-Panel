@@ -1,7 +1,6 @@
 module.exports = function (grunt) {
   require('load-grunt-tasks')(grunt)
 
-  grunt.loadNpmTasks('grunt-execute')
   grunt.loadNpmTasks('grunt-contrib-clean')
   grunt.loadNpmTasks('grunt-multi-dest')
   grunt.loadNpmTasks('grunt-babel')
@@ -34,18 +33,6 @@ module.exports = function (grunt) {
         options: {
           process: content => content.replace(/(\'|")ion.rangeSlider(\'|")/g, '$1./ion.rangeSlider.min$2'), // eslint-disable-line
         }
-      },
-      echarts_libs: {
-        cwd: 'node_modules/echarts/dist',
-        expand: true,
-        src: ['echarts.min.js'],
-        dest: 'dist/libs/'
-      },
-      image_to_dist: {
-        cwd: 'src',
-        expand: true,
-        src: ['src/image/**/*'],
-        dest: 'dist/image/'
       },
       pluginDef: {
         expand: true,
@@ -115,7 +102,6 @@ module.exports = function (grunt) {
     'copy:readme',
     'string-replace',
     'copy:pluginDef',
-    'copy:image_to_dist',
     'babel'])
 
   grunt.registerTask('build', [
