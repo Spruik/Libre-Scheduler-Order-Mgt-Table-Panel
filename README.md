@@ -244,4 +244,9 @@ For any issue, there are fundamentally three ways an individual can contribute:
 
 ## Change log
 
+- 1.0.1 Documentation Updates
+  - Expose simulator port 1880
+  - Remove unused grunt config
+  - Fix subtitle & project paths
+
 - 1.0.0 Initial Public Release

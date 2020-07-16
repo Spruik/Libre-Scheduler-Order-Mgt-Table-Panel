@@ -24,8 +24,8 @@
       "small": "img/icn-table-panel.svg",
       "large": "img/icn-table-panel.svg"
     },  
-    "version": "1.0.0",
-    "updated": "2020-07-01"
+    "version": "1.0.1",
+    "updated": "2020-07-16"
   },
   "dependencies": {
     "grafanaVersion": "6.x.x",
