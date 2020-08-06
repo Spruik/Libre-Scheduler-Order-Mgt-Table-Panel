@@ -125,9 +125,7 @@ $ cd ./Libre-Scheduler-Order-Mgt-Table-Panel
 ~/Libre-Scheduler-Order-Mgt-Table-Panel
 $ npm install
 ...
-added 714 packages from 399 contributors and audited 719 packages in 11.871s
-found 42 vulnerabilities (11 low, 6 moderate, 25 high)
-  run `npm audit fix` to fix them, or `npm audit` for details
+added 624 packages in 12.527s
 ```
 
 Install Grunt globally
@@ -161,7 +159,7 @@ Copied 1 file
 
 Running "babel:dist" (babel) task
 
-Done, without errors.
+Done.
 
 ```
 
@@ -173,7 +171,7 @@ $ docker-compose -f docker-compose.dev.yaml up -d
 Starting libre-scheduler-order-mgt-table-panel_influx_1   ... done
 Starting libre-scheduler-order-mgt-table-panel_postgres_1 ... done
 Starting libre-scheduler-order-mgt-table-panel_postrest_1 ... done
-Recreating libre-scheduler-order-mgt-table-panel_simulator_1 ... done
+Starting libre-scheduler-order-mgt-table-panel_simulator_1 ... done
 Starting libre-scheduler-order-mgt-table-panel_grafana_1     ... done
 
 ```
@@ -207,6 +205,9 @@ Running "clean:0" (clean) task
 Running "clean:1" (clean) task
 >> 1 path cleaned.
 
+Running "clean:2" (clean) task
+>> 1 path cleaned.
+
 Running "copy:src_to_dist" (copy) task
 Created 3 directories, copied 10 files
 
@@ -228,7 +229,10 @@ Running "babel:dist" (babel) task
 Running "compress:main" (compress) task
 >> Compressed 52 files.
 
-Done, without errors.
+Running "compress:tar" (compress) task
+>> Compressed 52 files.
+
+Done.
 
 ```
 
@@ -243,6 +247,13 @@ For any issue, there are fundamentally three ways an individual can contribute:
 - By helping to resolve the issue: Typically, this is done either in the form of demonstrating that the issue reported is not a problem after all, or more often, by opening a Pull Request that changes some bit of something in the panel in a concrete and reviewable manner.
 
 ## Change log
+
+- 1.0.2 Add tar build output
+  - Remove unused libraries
+  - Fix npm audit
+  - Add tar build output
+  - Update README shell outputs
+  - Bump revision
 
 - 1.0.1 Documentation Updates
   - Expose simulator port 1880
