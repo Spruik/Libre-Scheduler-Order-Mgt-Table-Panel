@@ -1,6 +1,6 @@
 {
   "name": "libre-scheduler-order-mgt-table-panel",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A Libre panel to create, schedule and release orders for manufacture",
   "repository": {
     "type": "git",
@@ -24,12 +24,13 @@
   ],
   "devDependencies": {
     "babel-preset-es2015": "^6.5.0",
-    "grunt": "^1.2.1",
+    "bl": ">=1.2.3",
     "grunt-babel": "~6.0.0",
     "grunt-contrib-clean": "~0.6.0",
     "grunt-contrib-copy": "~0.8.2",
     "grunt-contrib-jshint": "^1.0.0",
     "grunt-contrib-watch": "^1.1.0",
+    "grunt": "^1.2.1",
     "load-grunt-tasks": "^5.1.0",
     "standard": "^14.3.4"
   },
