@@ -1,6 +1,6 @@
 {
   "name": "libre-scheduler-order-mgt-table-panel",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A Libre panel to create, schedule and release orders for manufacture",
   "repository": {
     "type": "git",
